@@ -1,10 +1,15 @@
 import pandas as pd
 
 
-def game_to_dataframe(game, custom_names=None, team_names=None, custom_positions=None):
-    ps_ids_df = game_participant_ids_to_dataframe(game['participantIdentities'])
-    ps_df = game_participants_to_dataframe(game['participants'])
-    df_result = pd.concat([ps_ids_df, ps_df], axis=1)
+def game_to_dataframe(match, custom_names=None, team_names=None, custom_positions=None):
+    participants = match.pop('participants')
+    participant_ids = match.pop('participantIdentities')
+    teams = match.pop('teams')
+    m_df = pd.DataFrame(match, index=range(0, 10))
+    ps_ids_df = game_participant_ids_to_dataframe(participant_ids)
+    ps_df = game_participants_to_dataframe(participants)
+    t_df = game_teams_to_dataframe(teams)
+    df_result = pd.concat([m_df, ps_ids_df, ps_df, t_df], axis=1)
 
     if custom_names:
         df_result['player_name'] = custom_names
@@ -20,10 +25,8 @@ def game_to_dataframe(game, custom_names=None, team_names=None, custom_positions
 
 
 def game_participants_to_dataframe(participants):
-    stats = [p['stats'] for p in participants]
-    timeline = [p['timeline'] for p in participants]
-    [p.pop('stats') for p in participants]  # remove stats
-    [p.pop('timeline') for p in participants]  # remove timeline
+    stats = [p.pop('stats') for p in participants]
+    timeline = [p.pop('timeline') for p in participants]
     df1 = pd.concat([pd.DataFrame(p, index=(i,)) for i, p in enumerate(participants)])
     df2 = pd.concat([pd.DataFrame(s, index=(i,)) for i, s in enumerate(stats)])
     df3 = pd.concat([game_timeline_to_dataframe(t) for i, t in enumerate(timeline)])
@@ -159,3 +162,15 @@ def game_timeline_to_dataframe(timeline):
     tl_df["participantId"] = participant_id
 
     return tl_df
+
+
+def game_teams_to_dataframe(teams):
+    t1bans = [i['championId'] for i in teams[0].pop('bans')]
+    t2bans = [i['championId'] for i in teams[1].pop('bans')]
+    t1 = pd.DataFrame(teams[0], index=range(0, 5))
+    t2 = pd.DataFrame(teams[1], index=range(5, 10))
+    t1['ban1'], t1['ban2'], t1['ban3'], t1['ban4'], t1['ban5'] = [t1bans for i in range(0, 5)]
+    t2['ban1'], t2['ban2'], t2['ban3'], t2['ban4'], t2['ban5'] = [t2bans for i in range(0, 5)]
+    t1.columns = [c + '_team' for c in t1.columns]
+    t2.columns = [c + '_team' for c in t2.columns]
+    return pd.concat([t1, t2])
