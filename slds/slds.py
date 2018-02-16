@@ -20,6 +20,9 @@ class Slds:
                                                     file_name=self.__get_file_names_from_match_id(m_id=g[1]['game_id'],
                                                                                                   save_dir=read_dir)
                                                     ['match_filename']),
+                                    timeline=read_json(save_dir=read_dir,
+                                                       file_name=self.__get_file_names_from_match_id(
+                                                           m_id=g[1]['game_id'], save_dir=read_dir)['tl_filename']),
                                     custom_names=list(g[1][SLO_MATCHES_DATA_P_COLS].T),
                                     custom_positions=SLO_CUSTOM_POSITIONS,
                                     team_names=list(g[1][['blue', 'red']])) for g in df.iterrows()])
