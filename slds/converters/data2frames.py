@@ -1,7 +1,15 @@
 import pandas as pd
+import datetime
+from time import strftime
 
 
-def game_to_dataframe(match, custom_names=None, team_names=None, custom_positions=None):
+def game_to_dataframe(match, timeline, custom_names=None, team_names=None, custom_positions=None):
+    def get_readable_timestamp(seconds):
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+
+        return "{h}:{m}:{s}".format(h=int(h), m=int(m), s=int(s))
+
     participants = match.pop('participants')
     participant_ids = match.pop('participantIdentities')
     teams = match.pop('teams')
@@ -9,7 +17,9 @@ def game_to_dataframe(match, custom_names=None, team_names=None, custom_position
     ps_ids_df = game_participant_ids_to_dataframe(participant_ids)
     ps_df = game_participants_to_dataframe(participants)
     t_df = game_teams_to_dataframe(teams)
-    df_result = pd.concat([m_df, ps_ids_df, ps_df, t_df], axis=1)
+    tl_df = timeline_relevant_stats_to_dataframe(timeline)
+    df_result = pd.concat([m_df, ps_ids_df, ps_df, t_df, tl_df], axis=1)
+    df_result.to_csv('df_result.csv')
 
     if custom_names:
         df_result['player_name'] = custom_names
@@ -21,6 +31,9 @@ def game_to_dataframe(match, custom_names=None, team_names=None, custom_position
     if custom_positions:
         df_result['position'] = custom_positions
 
+    df_result.gameCreation = df_result.gameCreation.apply(
+        lambda x: datetime.datetime.fromtimestamp(x / 1e3).strftime('%Y-%m-%d %H:%M:%S'))
+    df_result.gameDuration = df_result.gameDuration.apply(get_readable_timestamp)
     return df_result
 
 
@@ -174,3 +187,34 @@ def game_teams_to_dataframe(teams):
     t1.columns = [c + '_team' for c in t1.columns]
     t2.columns = [c + '_team' for c in t2.columns]
     return pd.concat([t1, t2])
+
+
+def timeline_participant_stats_to_dataframe(timeline):
+    tl_frames = timeline['frames']
+    tl_participants = [frame['participantFrames'] for frame in tl_frames]
+    tl_ps_df = pd.concat(
+        [pd.DataFrame(stats, index=(i,)) for i, p in enumerate(tl_participants) for p_id, stats in p.items()])
+    return tl_ps_df.reset_index().rename(columns={'index': 'frame'})
+
+
+def timeline_relevant_stats_to_dataframe(timeline):
+    def time_to_stats_from_participant(p):
+        l4k = list(p.loc[p.totalGold >= 4000].head(1).frame)
+        l7k = list(p.loc[p.totalGold >= 7000].head(1).frame)
+        l50cs = list(p.loc[p.minionsKilled >= 50].head(1).frame)
+        l100cs = list(p.loc[p.minionsKilled >= 100].head(1).frame)
+        l50jcs = list(p.loc[p.jungleMinionsKilled >= 50].head(1).frame)
+        l100jcs = list(p.loc[p.jungleMinionsKilled >= 100].head(1).frame)
+        l50ccs = list(p.loc[p.minionsKilled + p.jungleMinionsKilled >= 50].head(1).frame)
+        l100ccs = list(p.loc[p.minionsKilled + p.jungleMinionsKilled >= 100].head(1).frame)
+        l6lvl = list(p.loc[p.level >= 6].head(1).frame)
+        l11lvl = list(p.loc[p.level >= 11].head(1).frame)
+        return {'tt4kgold': l4k[0] if l4k else None, 'tt7kgold': l7k[0] if l7k else None,
+                'tt50cs': l50cs[0] if l50cs else None, 'tt100cs': l100cs[0] if l100cs else None,
+                'tt50jcs': l50jcs[0] if l50jcs else None, 'tt100jcs': l100jcs[0] if l100jcs else None,
+                'tt50ccs': l50ccs[0] if l50ccs else None, 'tt100ccs': l100ccs[0] if l100ccs else None,
+                'ttlvl6': l6lvl[0] if l6lvl else None, 'ttlvl11': l11lvl[0] if l11lvl else None}
+
+    stats = timeline_participant_stats_to_dataframe(timeline)
+    ps = [stats.loc[stats.participantId == p_id] for p_id in range(1, 11)]
+    return pd.concat([pd.DataFrame(time_to_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
