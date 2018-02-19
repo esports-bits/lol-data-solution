@@ -1,4 +1,6 @@
 import json
+from config.constants import STATIC_DATA_DIR, DD_LANGUAGE, DD_RUNES_REFORGED, DATA_DRAGON_URL
+import requests
 
 
 def write_json(data, save_dir, file_name):
@@ -17,3 +19,10 @@ def read_json(save_dir, file_name):
     else:
         with open('{dir}/{name}.json'.format(dir=save_dir, name=file_name), 'r') as fp:
             return json.load(fp)
+
+
+def save_runes_reforged_json():
+    version = read_json(STATIC_DATA_DIR, file_name='versions')[0]
+    url = DATA_DRAGON_URL.format(version=version, language=DD_LANGUAGE, endpoint=DD_RUNES_REFORGED)
+    r = requests.get(url)
+    write_json(r.json(), save_dir=STATIC_DATA_DIR, file_name='runes_reforged')
