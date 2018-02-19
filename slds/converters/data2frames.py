@@ -1,14 +1,44 @@
 import pandas as pd
 import datetime
-from time import strftime
+from converters.kwargs2whatever import slo_game_kwargs
+from config.constants import DD_RUNES_REFORGED, DD_LANGUAGE, DATA_DRAGON_URL, STATIC_DATA_RELEVANT_COLS, \
+    STATIC_DATA_DIR, ITEMS_COLS, SUMMS_COLS, RUNES_COLS
+import requests
+from converters.data2files import read_json
 
 
-def game_to_dataframe(match, timeline, custom_names=None, team_names=None, custom_positions=None):
-    def get_readable_timestamp(seconds):
+def game_to_dataframe(match, timeline, **kwargs):
+    def timestamp_to_readable_time(seconds):
         m, s = divmod(seconds, 60)
         h, m = divmod(m, 60)
 
         return "{h}:{m}:{s}".format(h=int(h), m=int(m), s=int(s))
+
+    def ids_to_names(df):
+        # Champions
+        champs = champs_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='champions'))
+        df1 = df.merge(
+            champs.rename(columns={'name': 'champ_name'}), left_on='championId', right_on='id').drop('id', axis=1)
+        # Items
+        items = items_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='items'))
+        df2 = df1
+        for name in ITEMS_COLS:
+            df2 = df2.merge(items.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
+                            right_on='id', how='left').drop('id', axis=1)
+        # Summoner spells
+        summs = summs_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='summoners'))
+        df3 = df2
+        for name in SUMMS_COLS:
+            df3 = df3.merge(summs.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
+                            right_on='id', how='left').drop('id', axis=1)
+        # Runes
+        runes = runes_reforged_to_dataframe()
+        df4 = df3
+        for name in RUNES_COLS:
+            df4 = df4.merge(runes.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
+                            right_on='id', how='left').drop('id', axis=1)
+
+        return df4
 
     participants = match.pop('participants')
     participant_ids = match.pop('participantIdentities')
@@ -18,23 +48,18 @@ def game_to_dataframe(match, timeline, custom_names=None, team_names=None, custo
     ps_df = game_participants_to_dataframe(participants)
     t_df = game_teams_to_dataframe(teams)
     tl_df = timeline_relevant_stats_to_dataframe(timeline)
-    df_result = pd.concat([m_df, ps_ids_df, ps_df, t_df, tl_df], axis=1)
-    df_result.to_csv('df_result.csv')
+    df_concat = pd.concat([m_df, ps_ids_df, ps_df, t_df, tl_df], axis=1)
 
-    if custom_names:
-        df_result['player_name'] = custom_names
-
-    if team_names:
-        df_result.loc[:5, 'team_name'] = team_names[0]
-        df_result.loc[5:10, 'team_name'] = team_names[1]
-
-    if custom_positions:
-        df_result['position'] = custom_positions
+    if kwargs:
+        df_result = slo_game_kwargs(df_concat, kwargs)
+    else:
+        df_result = df_concat
 
     df_result.gameCreation = df_result.gameCreation.apply(
         lambda x: datetime.datetime.fromtimestamp(x / 1e3).strftime('%Y-%m-%d %H:%M:%S'))
-    df_result.gameDuration = df_result.gameDuration.apply(get_readable_timestamp)
-    return df_result
+    df_result.gameDuration = df_result.gameDuration.apply(timestamp_to_readable_time)
+
+    return ids_to_names(df_result)
 
 
 def game_participants_to_dataframe(participants):
@@ -218,3 +243,24 @@ def timeline_relevant_stats_to_dataframe(timeline):
     stats = timeline_participant_stats_to_dataframe(timeline)
     ps = [stats.loc[stats.participantId == p_id] for p_id in range(1, 11)]
     return pd.concat([pd.DataFrame(time_to_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
+
+
+def runes_reforged_to_dataframe():
+    runes = read_json(save_dir=STATIC_DATA_DIR, file_name='runes_reforged')
+    runes1 = pd.DataFrame(runes)[STATIC_DATA_RELEVANT_COLS]
+    slots = [path['slots'] for path in runes]
+    runes2 = pd.concat(
+        [pd.DataFrame(slot[i]['runes'])[STATIC_DATA_RELEVANT_COLS] for slot in slots for i in range(0, len(slot))])
+    return pd.concat([runes1, runes2]).reset_index(drop=True)
+
+
+def items_to_dataframe(items):
+    return pd.DataFrame(items['data']).T.reset_index(drop=True)[STATIC_DATA_RELEVANT_COLS]
+
+
+def champs_to_dataframe(champs):
+    return pd.DataFrame(champs['data']).T.reset_index(drop=True)[STATIC_DATA_RELEVANT_COLS]
+
+
+def summs_to_dataframe(summs):
+    return pd.DataFrame(summs['data']).T.reset_index(drop=True)[STATIC_DATA_RELEVANT_COLS]
