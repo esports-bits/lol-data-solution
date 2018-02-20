@@ -1,7 +1,7 @@
 import pandas as pd
 import datetime
 from converters.kwargs2whatever import slo_game_kwargs
-from config.constants import DD_RUNES_REFORGED, DD_LANGUAGE, DATA_DRAGON_URL, STATIC_DATA_RELEVANT_COLS, \
+from config.constants import STATIC_DATA_RELEVANT_COLS, \
     STATIC_DATA_DIR, ITEMS_COLS, SUMMS_COLS, RUNES_COLS
 import requests
 from converters.data2files import read_json
