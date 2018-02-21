@@ -21,25 +21,26 @@ class Slds:
         new = list(df.game_id.unique())
         new_ids = self.__get_new_ids(old, new)
 
-        if new_ids and not force_update:
-            print('There are new ids {}, merging the old data with the new one.'.format(new_ids))
-            df3 = df[df.game_id.isin(new_ids)]
-            df4 = self.__concat_games(df3, read_dir)
-            df_result = pd.concat([df2, df4.T.reset_index().drop_duplicates(subset='index',
-                                                                            keep='first').set_index('index').T])
-            return df_result.reset_index(drop=True)
+        if not force_update:
+            if new_ids:
+                print('There are new ids {}, merging the old data with the new one.'.format(new_ids))
+                df3 = df[df.game_id.isin(new_ids)]
+                df4 = self.__concat_games(df3, read_dir)
+                df_result = pd.concat([df2, df4.T.reset_index().drop_duplicates(subset='index',
+                                                                                keep='first').set_index('index').T])
+                return df_result.reset_index(drop=True)
+            elif not new_ids:
+                return None
         elif force_update:
             if new_ids:
                 print('Updating current datasets but there are new ids found: {}'.format(new_ids))
                 df_result = self.__concat_games(df, read_dir).T.reset_index()\
                     .drop_duplicates(subset='index', keep='first').set_index('index').T
-            else:
+            elif not new_ids:
                 print('Forcing update of the current datasets even though there are not new ids.')
                 df_result = self.__concat_games(df, read_dir).T.reset_index()\
                     .drop_duplicates(subset='index', keep='first').set_index('index').T
             return df_result.reset_index(drop=True)
-        elif not new_ids and not force_update:
-            return None
 
     def download_games(self, ids, save_dir):
         file_names = os.listdir(save_dir)
@@ -110,8 +111,8 @@ def main():
     slds = Slds(region='EUW1')
     ids = slds.get_slo_games_ids()
     slds.download_games(ids=ids, save_dir=SLO_GAMES_DIR)
-    slds.save_static_data_files()
-    df = slds.generate_dataset(read_dir=SLO_GAMES_DIR)
+    # slds.save_static_data_files()
+    df = slds.generate_dataset(read_dir=SLO_GAMES_DIR, force_update=True)
     if df is not None:
         df.to_excel('{}dataset_test.xlsx'.format(SLO_DATASETS_DIR))
         df.to_csv('{}dataset_test.csv'.format(SLO_DATASETS_DIR))
