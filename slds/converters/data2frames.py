@@ -1,9 +1,7 @@
 import pandas as pd
 import datetime
 from converters.kwargs2whatever import slo_game_kwargs
-from config.constants import STATIC_DATA_RELEVANT_COLS, \
-    STATIC_DATA_DIR, ITEMS_COLS, SUMMS_COLS, RUNES_COLS
-import requests
+from config.constants import STATIC_DATA_RELEVANT_COLS, STATIC_DATA_DIR, ITEMS_COLS, SUMMS_COLS, RUNES_COLS, BANS_COLS
 from converters.data2files import read_json
 
 
@@ -38,7 +36,13 @@ def game_to_dataframe(match, timeline, **kwargs):
             df4 = df4.merge(runes.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
                             right_on='id', how='left').drop('id', axis=1)
 
-        return df4
+        # Bans
+        df5 = df4
+        for name in BANS_COLS:
+            df5 = df5.merge(champs.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
+                            right_on='id', how='left').drop('id', axis=1)
+
+        return df5
 
     participants = match.pop('participants')
     participant_ids = match.pop('participantIdentities')
@@ -207,8 +211,8 @@ def game_teams_to_dataframe(teams):
     t2bans = [i['championId'] for i in teams[1].pop('bans')]
     t1 = pd.DataFrame(teams[0], index=range(0, 5))
     t2 = pd.DataFrame(teams[1], index=range(5, 10))
-    t1['ban1'], t1['ban2'], t1['ban3'], t1['ban4'], t1['ban5'] = [t1bans for i in range(0, 5)]
-    t2['ban1'], t2['ban2'], t2['ban3'], t2['ban4'], t2['ban5'] = [t2bans for i in range(0, 5)]
+    t1['ban1'], t1['ban2'], t1['ban3'], t1['ban4'], t1['ban5'] = [t1bans[0], t1bans[1], t1bans[2], t1bans[3], t1bans[4]]
+    t2['ban1'], t2['ban2'], t2['ban3'], t2['ban4'], t2['ban5'] = [t2bans[0], t2bans[1], t2bans[2], t2bans[3], t2bans[4]]
     t1.columns = [c + '_team' for c in t1.columns]
     t2.columns = [c + '_team' for c in t2.columns]
     return pd.concat([t1, t2])
@@ -264,3 +268,4 @@ def champs_to_dataframe(champs):
 
 def summs_to_dataframe(summs):
     return pd.DataFrame(summs['data']).T.reset_index(drop=True)[STATIC_DATA_RELEVANT_COLS]
+
