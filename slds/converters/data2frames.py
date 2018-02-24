@@ -35,7 +35,6 @@ def game_to_dataframe(match, timeline, **kwargs):
         for name in RUNES_COLS:
             df4 = df4.merge(runes.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
                             right_on='id', how='left').drop('id', axis=1)
-
         # Bans
         df5 = df4
         for name in BANS_COLS:
