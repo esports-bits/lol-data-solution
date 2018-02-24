@@ -112,7 +112,7 @@ def main():
     ids = slds.get_slo_games_ids()
     slds.download_games(ids=ids, save_dir=SLO_GAMES_DIR)
     # slds.save_static_data_files()
-    df = slds.generate_dataset(read_dir=SLO_GAMES_DIR, force_update=True)
+    df = slds.generate_dataset(read_dir=SLO_GAMES_DIR)
     if df is not None:
         df.to_excel('{}dataset_test.xlsx'.format(SLO_DATASETS_DIR))
         df.to_csv('{}dataset_test.csv'.format(SLO_DATASETS_DIR))
