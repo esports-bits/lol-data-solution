@@ -16,10 +16,14 @@ class Slds:
 
     def generate_dataset(self, read_dir, force_update=False):
         df = pd.read_csv(SLO_MATCHES_FILE_PATH, dtype=SLO_DATA_DTYPES)
-        df2 = pd.read_csv('{}{}'.format(SLO_DATASETS_DIR, SLO_DATASET_CSV), index_col=0)
-        old = list(df2.gameId.unique())
         new = list(df.game_id.unique())
-        new_ids = self.__get_new_ids(old, new)
+        try:
+            df2 = pd.read_csv('{}{}'.format(SLO_DATASETS_DIR, SLO_DATASET_CSV), index_col=0)
+            old = list(df2.gameId.unique())
+            new_ids = self.__get_new_ids(old, new)
+        except FileNotFoundError:
+            new_ids = new
+            force_update = True
 
         if not force_update:
             if new_ids:
@@ -114,8 +118,9 @@ def main():
     # slds.save_static_data_files()
     df = slds.generate_dataset(read_dir=SLO_GAMES_DIR)
     if df is not None:
-        df.to_excel('{}dataset_test.xlsx'.format(SLO_DATASETS_DIR))
-        df.to_csv('{}dataset_test.csv'.format(SLO_DATASETS_DIR))
+        df.to_excel('{}slo_dataset.xlsx'.format(SLO_DATASETS_DIR))
+        df.to_csv('{}slo_dataset.csv'.format(SLO_DATASETS_DIR))
+        print("Process succesfully finished.")
     else:
         print("Nothing has happened.")
 
