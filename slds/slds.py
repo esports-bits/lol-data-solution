@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import datetime as dt
 from tqdm import tqdm
 import os
+import argparse
 
 
 class Slds:
@@ -111,18 +112,42 @@ class Slds:
         write_json(summs, STATIC_DATA_DIR, file_name='summoners')
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='LoL solution to transform match data to DataFrames and CSV firstly used for SLO.')
+    parser.add_argument('-ex', '--export', help='Export dataset.', action='store_true')
+    parser.add_argument('-X', '--xlsx', help='Export dataset as XLSX.', action='store_true')
+    parser.add_argument('-C', '--csv', help='Export dataset as CSV.', action='store_true')
+    parser.add_argument('-dw', '--download', help='Download new data if available.', action='store_true')
+    parser.add_argument('-usd', '--update_static_data', help='Update local files of static data.', action='store_true')
+    parser.add_argument('-fu', '--force_update', help='Force the update of the datasets.', action='store_true')
+    return parser.parse_args()
+
+
 def main():
     slds = Slds(region='EUW1')
-    ids = slds.get_slo_games_ids()
-    slds.download_games(ids=ids, save_dir=SLO_GAMES_DIR)
-    # slds.save_static_data_files()
-    df = slds.generate_dataset(read_dir=SLO_GAMES_DIR)
-    if df is not None:
-        df.to_excel('{}slo_dataset.xlsx'.format(SLO_DATASETS_DIR))
-        df.to_csv('{}slo_dataset.csv'.format(SLO_DATASETS_DIR))
-        print("Process succesfully finished.")
-    else:
-        print("Nothing has happened.")
+    args = parse_args()
+    if args.download:
+        ids = slds.get_slo_games_ids()
+        slds.download_games(ids=ids, save_dir=SLO_GAMES_DIR)
+        print("Games downloaded.")
+    
+    if args.update_static_data:
+        slds.save_static_data_files()
+        print("Static data updated.")
+    
+    if args.export:
+        df = slds.generate_dataset(read_dir=SLO_GAMES_DIR, force_update=args.force_update)
+        if df is not None:
+            if args.xlsx:
+                df.to_excel('{}slo_dataset.xlsx'.format(SLO_DATASETS_DIR))
+            if args.csv:
+                df.to_csv('{}slo_dataset.csv'.format(SLO_DATASETS_DIR))
+            if not args.csv and not args.xlsx:
+                df.to_excel('{}slo_dataset.xlsx'.format(SLO_DATASETS_DIR))
+                df.to_csv('{}slo_dataset.csv'.format(SLO_DATASETS_DIR))
+            print("Export finished.")
+        else:
+            print("No export done.")
 
 
 if __name__ == '__main__':
