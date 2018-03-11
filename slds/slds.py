@@ -1,13 +1,14 @@
 from riotwatcher import RiotWatcher
 from converters.data2frames import game_to_dataframe as g2df
 from converters.data2files import write_json, read_json, save_runes_reforged_json
-from config.constants import SCRIMS_POSITIONS_COLS, CUSTOM_PARTICIPANT_COLS, SLO_CUSTOM_POSITIONS, \
-    API_KEY, EXPORTS_DIR, STATIC_DATA_DIR, SUPPORTED_LEAGUES, LEAGUES_DATA_DICT
+from config.constants import SCRIMS_POSITIONS_COLS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, \
+    API_KEY, STATIC_DATA_DIR, SUPPORTED_LEAGUES, LEAGUES_DATA_DICT
 import pandas as pd
 from datetime import datetime as dt
 from tqdm import tqdm
 import os
 import argparse
+import urllib.request, json
 
 
 class Slds:
@@ -50,22 +51,41 @@ class Slds:
             return df_result.reset_index(drop=True)
 
     def download_games(self, ids, save_dir):
+        def tournament_match_to_dict(id1, hash1, tournament):
+            with urllib.request.urlopen('https://acs.leagueoflegends.com/v1/stats/game/{tr}/{id}'
+                                        '?gameHash={hash}'.format(tr=tournament, id=id1, hash=hash1)) as url:
+                match = json.loads(url.read().decode())
+            with urllib.request.urlopen('https://acs.leagueoflegends.com/v1/stats/game/{tr}/{id}/timeline'
+                                        '?gameHash={hash}'.format(tr=tournament, id=id1, hash=hash1)) as url:
+                tl = json.loads(url.read().decode())
+            return match, tl
         file_names = os.listdir(save_dir)
         curr_ids = list(set([f.split('.')[0].split('_')[1] for f in file_names]))
         new_ids = self.__get_new_ids(curr_ids, ids)
         if new_ids:
             for item in tqdm(new_ids, desc='Downloading games'):
-                match = self.rw.match.by_id(match_id=item, region=self.region)
-                timeline = self.rw.match.timeline_by_match(match_id=item, region=self.region)
-                data = {'match': match, 'timeline': timeline}
-                self.__save_match_raw_data(data=data, save_dir=save_dir)
+                if LEAGUES_DATA_DICT[self.league]['official']:
+                    id1 = item.split('#')[0]
+                    tr = item.split('#')[1]
+                    hash1 = item.split('#')[2]
+                    match, timeline = tournament_match_to_dict(id1, hash1, tr)
+                    data = {'match': match, 'timeline': timeline}
+                    self.__save_match_raw_data(data=data, save_dir=save_dir, hash=hash1)
+                else:
+                    match = self.rw.match.by_id(match_id=item, region=self.region)
+                    timeline = self.rw.match.timeline_by_match(match_id=item, region=self.region)
+                    data = {'match': match, 'timeline': timeline}
+                    self.__save_match_raw_data(data=data, save_dir=save_dir)
         else:
             print('All games already downloaded.')
 
-    @staticmethod
-    def __save_match_raw_data(data, save_dir):
+    def __save_match_raw_data(self, data, save_dir, **kwargs):
         if isinstance(data, dict):
-            game_id = data['match']['gameId']
+            if LEAGUES_DATA_DICT[self.league]['official']:
+                game_id = str(data['match']['gameId']) + '#' + str(data['match']['platformId'] + '#'
+                                                                   + str(kwargs['hash']))
+            else:
+                game_id = str(data['match']['gameId'])
             game_creation = dt.strftime(dt.fromtimestamp(data['match']['gameCreation'] / 1e3), '%d-%m-%y')
             write_json(data['match'], save_dir=save_dir, file_name='{date}_{id}'.format(date=game_creation, id=game_id))
             write_json(data['timeline'], save_dir=save_dir, file_name='{date}_{id}_tl'
@@ -77,6 +97,8 @@ class Slds:
     def get_league_game_ids(self):
         league_data_path = LEAGUES_DATA_DICT[self.league]['matches_file_path']
         df = pd.read_csv(league_data_path, dtype=LEAGUES_DATA_DICT[self.league]['dtypes'])
+        if LEAGUES_DATA_DICT[self.league]['official']:
+            return list(df.game_id.map(str) + '#' + df.tournament + '#' + df.hash)
         return list(df.game_id)
 
     @staticmethod
@@ -87,6 +109,8 @@ class Slds:
         return {'match_filename': match_filename.split('.')[0], 'tl_filename': tl_filename.split('.')[0]}
 
     def __get_new_ids(self, old, new):
+        if LEAGUES_DATA_DICT[self.league]['official']:
+            return list(set(map(str, new)) - set(map(str, old)))
         return list(set(map(int, new)) - set(map(int, old)))
 
     def __concat_games(self, df, read_dir):
@@ -99,9 +123,9 @@ class Slds:
                                                       file_name=self.__get_file_names_from_match_id(
                                                           m_id=g[1]['game_id'], save_dir=read_dir)['tl_filename']),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS].T),
-                                   custom_positions=SLO_CUSTOM_POSITIONS,
+                                   custom_positions=STANDARD_POSITIONS,
                                    team_names=list(g[1][['blue', 'red']]),
-                                   week=g[1]['week']) for g in df.iterrows()])
+                                   week=g[1]['week'], custom=True) for g in df.iterrows()])
         elif self.league == 'SCRIMS':
             return pd.concat([g2df(match=read_json(save_dir=read_dir,
                                                    file_name=self.__get_file_names_from_match_id(m_id=g[1]['game_id'],
@@ -112,7 +136,18 @@ class Slds:
                                                           m_id=g[1]['game_id'], save_dir=read_dir)['tl_filename']),
                                    custom_positions=list(g[1][SCRIMS_POSITIONS_COLS]),
                                    team_names=list(g[1][['blue', 'red']]),
-                                   custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS])) for g in df.iterrows()])
+                                   custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
+                                   custom=True) for g in df.iterrows()])
+        elif self.league == 'LCK':
+            return pd.concat([g2df(match=read_json(save_dir=read_dir,
+                                                   file_name=self.__get_file_names_from_match_id(m_id=g[1]['game_id'],
+                                                                                                 save_dir=read_dir)
+                                                   ['match_filename']),
+                                   timeline=read_json(save_dir=read_dir,
+                                                      file_name=self.__get_file_names_from_match_id(
+                                                          m_id=g[1]['game_id'], save_dir=read_dir)['tl_filename']),
+                                   week=g[1]['week'], custom=False,
+                                   custom_positions=STANDARD_POSITIONS) for g in df.iterrows()])
 
     def save_static_data_files(self):
         versions = self.rw.static_data.versions(region=self.region)
@@ -149,13 +184,8 @@ def main():
     
     slds = Slds(region='EUW1', league=league)
     if args.download:
-        if LEAGUES_DATA_DICT[league]['official']:
-            # PARSE OFFICIAL LEAGUES DATA
-            return None
-        else:
-            ids = slds.get_league_game_ids()
-            slds.download_games(ids=ids, save_dir=LEAGUES_DATA_DICT[league]['games_path'])
-
+        ids = slds.get_league_game_ids()
+        slds.download_games(ids=ids, save_dir=LEAGUES_DATA_DICT[league]['games_path'])
         print("Games downloaded.")
     
     if args.update_static_data:

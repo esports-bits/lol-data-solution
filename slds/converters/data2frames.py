@@ -47,7 +47,7 @@ def game_to_dataframe(match, timeline, **kwargs):
     participant_ids = match.pop('participantIdentities')
     teams = match.pop('teams')
     m_df = pd.DataFrame(match, index=range(0, 10))
-    ps_ids_df = game_participant_ids_to_dataframe(participant_ids)
+    ps_ids_df = game_participant_ids_to_dataframe(participant_ids, custom=kwargs['custom'])
     ps_df = game_participants_to_dataframe(participants)
     t_df = game_teams_to_dataframe(teams)
     tl_df = timeline_relevant_stats_to_dataframe(timeline)
@@ -60,7 +60,7 @@ def game_to_dataframe(match, timeline, **kwargs):
 
     df_result.gameCreation = df_result.gameCreation.apply(
         lambda x: datetime.datetime.fromtimestamp(x / 1e3).strftime('%Y-%m-%d %H:%M:%S'))
-    df_result.gameDuration = df_result.gameDuration.apply(timestamp_to_readable_time)
+    df_result['game_duration_time'] = df_result.gameDuration.apply(timestamp_to_readable_time)
 
     df_result2 = ids_to_names(df_result)
     return df_result2.T.reset_index().drop_duplicates(subset='index', keep='first').set_index('index').T
@@ -75,7 +75,11 @@ def game_participants_to_dataframe(participants):
     return pd.concat([df1, df2, df3], axis=1)
 
 
-def game_participant_ids_to_dataframe(participant_ids):
+def game_participant_ids_to_dataframe(participant_ids, custom):
+    if not custom:
+        return pd.concat([pd.DataFrame({'participantId': p['participantId'],
+                                        'summonerName': p['player']['summonerName']},
+                                       index=(i,)) for i, p in enumerate(participant_ids)])
     return pd.concat([pd.DataFrame(p_id, index=(i,)) for i, p_id in enumerate(participant_ids)])
 
 
@@ -231,7 +235,7 @@ def timeline_participant_stats_to_dataframe(timeline):
 
 
 def timeline_relevant_stats_to_dataframe(timeline):
-    def time_to_stats_from_participant(p):
+    def timeto_stats_from_participant(p):
         l4k = list(p.loc[p.totalGold >= 4000].head(1).frame)
         l7k = list(p.loc[p.totalGold >= 7000].head(1).frame)
         l50cs = list(p.loc[p.minionsKilled >= 50].head(1).frame)
@@ -242,15 +246,31 @@ def timeline_relevant_stats_to_dataframe(timeline):
         l100ccs = list(p.loc[p.minionsKilled + p.jungleMinionsKilled >= 100].head(1).frame)
         l6lvl = list(p.loc[p.level >= 6].head(1).frame)
         l11lvl = list(p.loc[p.level >= 11].head(1).frame)
+        f5 = p.loc[p.frame == 5]
+        f10 = p.loc[p.frame == 10]
+        f15 = p.loc[p.frame == 15]
+        f20 = p.loc[p.frame == 20]
+        g5 = list(f5.totalGold)
+        g10 = list(f10.totalGold)
+        g15 = list(f15.totalGold)
+        g20 = list(f20.totalGold)
+        ccs5 = list(f5.minionsKilled + f5.jungleMinionsKilled)
+        ccs10 = list(f10.minionsKilled + f10.jungleMinionsKilled)
+        ccs15 = list(f15.minionsKilled + f15.jungleMinionsKilled)
+        ccs20 = list(f20.minionsKilled + f20.jungleMinionsKilled)
         return {'tt4kgold': l4k[0] if l4k else None, 'tt7kgold': l7k[0] if l7k else None,
                 'tt50cs': l50cs[0] if l50cs else None, 'tt100cs': l100cs[0] if l100cs else None,
                 'tt50jcs': l50jcs[0] if l50jcs else None, 'tt100jcs': l100jcs[0] if l100jcs else None,
                 'tt50ccs': l50ccs[0] if l50ccs else None, 'tt100ccs': l100ccs[0] if l100ccs else None,
-                'ttlvl6': l6lvl[0] if l6lvl else None, 'ttlvl11': l11lvl[0] if l11lvl else None}
+                'ttlvl6': l6lvl[0] if l6lvl else None, 'ttlvl11': l11lvl[0] if l11lvl else None,
+                'gold_at_5': g5[0] if g5 else None, 'gold_at_10': g10[0] if g10 else None,
+                'gold_at_15': g15[0] if g15 else None, 'gold_at_20': g20[0] if g20 else None,
+                'ccs_at_5': ccs5[0] if ccs5 else None, 'ccs_at_10': ccs10[0] if ccs5 else None,
+                'ccs_at_15': ccs15[0] if ccs15 else None, 'ccs_at_20': ccs20[0] if ccs20 else None}
 
     stats = timeline_participant_stats_to_dataframe(timeline)
     ps = [stats.loc[stats.participantId == p_id] for p_id in range(1, 11)]
-    return pd.concat([pd.DataFrame(time_to_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
+    return pd.concat([pd.DataFrame(timeto_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
 
 
 def runes_reforged_to_dataframe():
