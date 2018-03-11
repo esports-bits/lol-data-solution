@@ -6,7 +6,7 @@ WORK_DIR = '../'
 LEAGUES_DATA_DIR = WORK_DIR + 'leagues_data/'
 MATCHES_RAW_DATA_DIR = WORK_DIR + 'matches_raw_data/'
 SLO_GAMES_DIR = MATCHES_RAW_DATA_DIR + 'slo_games/'
-LCK_GAMES_DIR = MATCHES_RAW_DATA_DIR + 'slo_games/'
+LCK_GAMES_DIR = MATCHES_RAW_DATA_DIR + 'lck_games/'
 SCRIMS_GAMES_DIR = MATCHES_RAW_DATA_DIR + 'scrims/'
 EXPORTS_DIR = WORK_DIR + 'exports/'
 STATIC_DATA_DIR = WORK_DIR + 'static_data/'
@@ -25,7 +25,7 @@ DD_LANGUAGE = 'en_US'
 DD_RUNES_REFORGED = 'runesReforged.json'
 
 CUSTOM_PARTICIPANT_COLS = ['p_1', 'p_2', 'p_3', 'p_4', 'p_5', 'p_6', 'p_7', 'p_8', 'p_9', 'p_10']
-SLO_CUSTOM_POSITIONS = ['TOP', 'JUNG', 'MID', 'ADC', 'SUPP', 'TOP', 'JUNG', 'MID', 'ADC', 'SUPP']
+STANDARD_POSITIONS = ['TOP', 'JUNG', 'MID', 'ADC', 'SUPP', 'TOP', 'JUNG', 'MID', 'ADC', 'SUPP']
 SCRIMS_POSITIONS_COLS = ['pos_1', 'pos_2', 'pos_3', 'pos_4', 'pos_5', 'pos_6', 'pos_7', 'pos_8', 'pos_9', 'pos_10']
 STATIC_DATA_RELEVANT_COLS = ['id', 'name']
 CHAMP_COLS = ["championId"]
