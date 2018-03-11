@@ -1,9 +1,8 @@
 from riotwatcher import RiotWatcher
 from converters.data2frames import game_to_dataframe as g2df
 from converters.data2files import write_json, read_json, save_runes_reforged_json
-from config.constants import SLO_MATCHES_FILE_PATH, SLO_DATA_DTYPES, SLO_MATCHES_DATA_P_COLS, SLO_CUSTOM_POSITIONS, \
-    API_KEY, SLO_GAMES_DIR, EXPORTS_DIR, SLO_DATASET_CSV, STATIC_DATA_DIR, SUPPORTED_LEAGUES, LEAGUES_DATA_DICT, \
-    LCK_DATA_DTYPES
+from config.constants import SCRIMS_POSITIONS_COLS, CUSTOM_PARTICIPANT_COLS, SLO_CUSTOM_POSITIONS, \
+    API_KEY, EXPORTS_DIR, STATIC_DATA_DIR, SUPPORTED_LEAGUES, LEAGUES_DATA_DICT
 import pandas as pd
 from datetime import datetime as dt
 from tqdm import tqdm
@@ -18,10 +17,11 @@ class Slds:
         self.league = league
 
     def generate_dataset(self, read_dir, force_update=False):
-        df = pd.read_csv(SLO_MATCHES_FILE_PATH, dtype=SLO_DATA_DTYPES)
+        df = pd.read_csv(LEAGUES_DATA_DICT[self.league]['matches_file_path'],
+                         dtype=LEAGUES_DATA_DICT[self.league]['dtypes'])
         new = list(df.game_id.unique())
         try:
-            df2 = pd.read_csv('{}{}'.format(EXPORTS_DIR, SLO_DATASET_CSV), index_col=0)
+            df2 = pd.read_csv('{}'.format(LEAGUES_DATA_DICT[self.league]['csv_path']), index_col=0)
             old = list(df2.gameId.unique())
             new_ids = self.__get_new_ids(old, new)
         except FileNotFoundError:
@@ -76,7 +76,7 @@ class Slds:
 
     def get_league_game_ids(self):
         league_data_path = LEAGUES_DATA_DICT[self.league]['matches_file_path']
-        df = pd.read_csv(league_data_path, dtype=LCK_DATA_DTYPES)
+        df = pd.read_csv(league_data_path, dtype=LEAGUES_DATA_DICT[self.league]['dtypes'])
         return list(df.game_id)
 
     @staticmethod
@@ -90,17 +90,29 @@ class Slds:
         return list(set(map(int, new)) - set(map(int, old)))
 
     def __concat_games(self, df, read_dir):
-        return pd.concat([g2df(match=read_json(save_dir=read_dir,
-                                               file_name=self.__get_file_names_from_match_id(m_id=g[1]['game_id'],
-                                                                                             save_dir=read_dir)
-                                               ['match_filename']),
-                               timeline=read_json(save_dir=read_dir,
-                                                  file_name=self.__get_file_names_from_match_id(
-                                                      m_id=g[1]['game_id'], save_dir=read_dir)['tl_filename']),
-                               custom_names=list(g[1][SLO_MATCHES_DATA_P_COLS].T),
-                               custom_positions=SLO_CUSTOM_POSITIONS,
-                               team_names=list(g[1][['blue', 'red']]),
-                               week=g[1]['week']) for g in df.iterrows()])
+        if self.league == 'SLO':
+            return pd.concat([g2df(match=read_json(save_dir=read_dir,
+                                                   file_name=self.__get_file_names_from_match_id(m_id=g[1]['game_id'],
+                                                                                                 save_dir=read_dir)
+                                                   ['match_filename']),
+                                   timeline=read_json(save_dir=read_dir,
+                                                      file_name=self.__get_file_names_from_match_id(
+                                                          m_id=g[1]['game_id'], save_dir=read_dir)['tl_filename']),
+                                   custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS].T),
+                                   custom_positions=SLO_CUSTOM_POSITIONS,
+                                   team_names=list(g[1][['blue', 'red']]),
+                                   week=g[1]['week']) for g in df.iterrows()])
+        elif self.league == 'SCRIMS':
+            return pd.concat([g2df(match=read_json(save_dir=read_dir,
+                                                   file_name=self.__get_file_names_from_match_id(m_id=g[1]['game_id'],
+                                                                                                 save_dir=read_dir)
+                                                   ['match_filename']),
+                                   timeline=read_json(save_dir=read_dir,
+                                                      file_name=self.__get_file_names_from_match_id(
+                                                          m_id=g[1]['game_id'], save_dir=read_dir)['tl_filename']),
+                                   custom_positions=list(g[1][SCRIMS_POSITIONS_COLS]),
+                                   team_names=list(g[1][['blue', 'red']]),
+                                   custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS])) for g in df.iterrows()])
 
     def save_static_data_files(self):
         versions = self.rw.static_data.versions(region=self.region)
@@ -117,7 +129,8 @@ class Slds:
 def parse_args():
     parser = argparse.ArgumentParser(description='LoL solution to transform match data to DataFrames and CSV firstly '
                                                  'used for SLO.')
-    parser.add_argument('-l', '--league', help='Choose league. [LCK, SLO]')
+    parser.add_argument('-l', '--league', help='Choose league. [LCK, SLO, SCRIMS]')
+    parser.add_argument('-r', '--region', help='Choose region. [EUW1]')
     parser.add_argument('-ex', '--export', help='Export dataset.', action='store_true')
     parser.add_argument('-X', '--xlsx', help='Export dataset as XLSX.', action='store_true')
     parser.add_argument('-C', '--csv', help='Export dataset as CSV.', action='store_true')
@@ -137,10 +150,12 @@ def main():
     slds = Slds(region='EUW1', league=league)
     if args.download:
         if LEAGUES_DATA_DICT[league]['official']:
-
+            # PARSE OFFICIAL LEAGUES DATA
+            return None
         else:
             ids = slds.get_league_game_ids()
             slds.download_games(ids=ids, save_dir=LEAGUES_DATA_DICT[league]['games_path'])
+
         print("Games downloaded.")
     
     if args.update_static_data:
@@ -148,15 +163,15 @@ def main():
         print("Static data updated.")
     
     if args.export:
-        df = slds.generate_dataset(read_dir=SLO_GAMES_DIR, force_update=args.force_update)
+        df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league]['games_path'], force_update=args.force_update)
         if df is not None:
             if args.xlsx:
-                df.to_excel('{}slo_dataset.xlsx'.format(EXPORTS_DIR))
+                df.to_excel('{}'.format(LEAGUES_DATA_DICT[league]['excel_path']))
             if args.csv:
-                df.to_csv('{}slo_dataset.csv'.format(EXPORTS_DIR))
+                df.to_csv('{}'.format(LEAGUES_DATA_DICT[league]['csv_path']))
             if not args.csv and not args.xlsx:
-                df.to_excel('{}slo_dataset.xlsx'.format(EXPORTS_DIR))
-                df.to_csv('{}slo_dataset.csv'.format(EXPORTS_DIR))
+                df.to_excel('{}'.format(LEAGUES_DATA_DICT[league]['excel_path']))
+                df.to_csv('{}'.format(LEAGUES_DATA_DICT[league]['csv_path']))
             print("Export finished.")
         else:
             print("No export done.")
