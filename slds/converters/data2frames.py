@@ -62,7 +62,8 @@ def game_to_dataframe(match, timeline, **kwargs):
         lambda x: datetime.datetime.fromtimestamp(x / 1e3).strftime('%Y-%m-%d %H:%M:%S'))
     df_result.gameDuration = df_result.gameDuration.apply(timestamp_to_readable_time)
 
-    return ids_to_names(df_result)
+    df_result2 = ids_to_names(df_result)
+    return df_result2.T.reset_index().drop_duplicates(subset='index', keep='first').set_index('index').T
 
 
 def game_participants_to_dataframe(participants):
@@ -208,10 +209,14 @@ def game_timeline_to_dataframe(timeline):
 def game_teams_to_dataframe(teams):
     t1bans = [i['championId'] for i in teams[0].pop('bans')]
     t2bans = [i['championId'] for i in teams[1].pop('bans')]
+    while len(t1bans) < 5:
+        t1bans.append(0)
+    while len(t2bans) < 5:
+        t2bans.append(0)
     t1 = pd.DataFrame(teams[0], index=range(0, 5))
     t2 = pd.DataFrame(teams[1], index=range(5, 10))
-    t1['ban1'], t1['ban2'], t1['ban3'], t1['ban4'], t1['ban5'] = [t1bans[0], t1bans[1], t1bans[2], t1bans[3], t1bans[4]]
-    t2['ban1'], t2['ban2'], t2['ban3'], t2['ban4'], t2['ban5'] = [t2bans[0], t2bans[1], t2bans[2], t2bans[3], t2bans[4]]
+    t1['ban1'], t1['ban2'], t1['ban3'], t1['ban4'], t1['ban5'] = t1bans
+    t2['ban1'], t2['ban2'], t2['ban3'], t2['ban4'], t2['ban5'] = t2bans
     t1.columns = [c + '_team' for c in t1.columns]
     t2.columns = [c + '_team' for c in t2.columns]
     return pd.concat([t1, t2])
