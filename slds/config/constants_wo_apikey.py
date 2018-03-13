@@ -14,6 +14,7 @@ STATIC_DATA_DIR = WORK_DIR + 'static_data/'
 SLO_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'slo_spring_S8.csv'
 LCK_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'lck_spring_S8.csv'
 SCRIMS_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'scrims.csv'
+SOLOQ_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'soloq.csv'
 SLO_DATASET_CSV = EXPORTS_DIR + 'slo_dataset.csv'
 SLO_DATASET_XLSX = EXPORTS_DIR + 'slo_dataset.xlsx'
 LCK_DATASET_CSV = EXPORTS_DIR + 'lck_dataset.csv'
@@ -63,7 +64,7 @@ LEAGUES_DATA_DICT = {'LCK': {'matches_file_path': LCK_MATCHES_FILE_PATH,
                                            'p_7': str, 'p_8': str, 'p_9': str, 'p_10': str},
                                 'csv_path': SCRIMS_DATASET_CSV,
                                 'excel_path': SCRIMS_DATASET_XLSX},
-                     'SOLOQ': {'matches_file_path': None,
+                     'SOLOQ': {'matches_file_path': SOLOQ_MATCHES_FILE_PATH,
                                'games_path': SOLOQ_GAMES_DIR,
                                'official': False,
                                'dtypes': {},
