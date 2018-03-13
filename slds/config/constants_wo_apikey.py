@@ -7,6 +7,7 @@ LEAGUES_DATA_DIR = WORK_DIR + 'leagues_data/'
 MATCHES_RAW_DATA_DIR = WORK_DIR + 'matches_raw_data/'
 SLO_GAMES_DIR = MATCHES_RAW_DATA_DIR + 'slo_games/'
 LCK_GAMES_DIR = MATCHES_RAW_DATA_DIR + 'lck_games/'
+SOLOQ_GAMES_DIR = MATCHES_RAW_DATA_DIR + 'soloq/'
 SCRIMS_GAMES_DIR = MATCHES_RAW_DATA_DIR + 'scrims/'
 EXPORTS_DIR = WORK_DIR + 'exports/'
 STATIC_DATA_DIR = WORK_DIR + 'static_data/'
@@ -19,6 +20,8 @@ LCK_DATASET_CSV = EXPORTS_DIR + 'lck_dataset.csv'
 LCK_DATASET_XLSX = EXPORTS_DIR + 'lck_dataset.xlsx'
 SCRIMS_DATASET_CSV = EXPORTS_DIR + 'scrims_dataset.csv'
 SCRIMS_DATASET_XLSX = EXPORTS_DIR + 'scrims_dataset.xlsx'
+SOLOQ_DATASET_CSV = EXPORTS_DIR + 'soloq_dataset.csv'
+SOLOQ_DATASET_XLSX = EXPORTS_DIR + 'soloq_dataset.xlsx'
 
 DATA_DRAGON_URL = 'http://ddragon.leagueoflegends.com/cdn/{version}/data/{language}/{endpoint}'
 DD_LANGUAGE = 'en_US'
@@ -59,6 +62,12 @@ LEAGUES_DATA_DICT = {'LCK': {'matches_file_path': LCK_MATCHES_FILE_PATH,
                                            'p_1': str, 'p_2': str, 'p_3': str, 'p_4': str, 'p_5': str, 'p_6': str,
                                            'p_7': str, 'p_8': str, 'p_9': str, 'p_10': str},
                                 'csv_path': SCRIMS_DATASET_CSV,
-                                'excel_path': SCRIMS_DATASET_XLSX}
+                                'excel_path': SCRIMS_DATASET_XLSX},
+                     'SOLOQ': {'matches_file_path': None,
+                               'games_path': SOLOQ_GAMES_DIR,
+                               'official': False,
+                               'dtypes': {},
+                               'csv_path': SOLOQ_DATASET_CSV,
+                               'excel_path': SOLOQ_DATASET_XLSX}
                      }
 SUPPORTED_LEAGUES = list(LEAGUES_DATA_DICT.keys())
