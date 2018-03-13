@@ -8,7 +8,10 @@ from datetime import datetime as dt
 from tqdm import tqdm
 import os
 import argparse
-import urllib.request, json
+import urllib.request
+import json
+from itertools import chain
+from requests.exceptions import HTTPError
 
 
 class Slds:
@@ -21,6 +24,7 @@ class Slds:
         df = pd.read_csv(LEAGUES_DATA_DICT[self.league]['matches_file_path'],
                          dtype=LEAGUES_DATA_DICT[self.league]['dtypes'])
         new = list(df.game_id.unique())
+        df2 = pd.DataFrame()
         try:
             df2 = pd.read_csv('{}'.format(LEAGUES_DATA_DICT[self.league]['csv_path']), index_col=0)
             old = list(df2.gameId.unique())
@@ -29,6 +33,7 @@ class Slds:
             new_ids = new
             force_update = True
 
+        df_result = pd.DataFrame()
         if not force_update:
             if new_ids:
                 print('There are new ids {}, merging the old data with the new one.'.format(new_ids))
@@ -64,18 +69,21 @@ class Slds:
         new_ids = self.__get_new_ids(curr_ids, ids)
         if new_ids:
             for item in tqdm(new_ids, desc='Downloading games'):
-                if LEAGUES_DATA_DICT[self.league]['official']:
-                    id1 = item.split('#')[0]
-                    tr = item.split('#')[1]
-                    hash1 = item.split('#')[2]
-                    match, timeline = tournament_match_to_dict(id1, hash1, tr)
-                    data = {'match': match, 'timeline': timeline}
-                    self.__save_match_raw_data(data=data, save_dir=save_dir, hash=hash1)
-                else:
-                    match = self.rw.match.by_id(match_id=item, region=self.region)
-                    timeline = self.rw.match.timeline_by_match(match_id=item, region=self.region)
-                    data = {'match': match, 'timeline': timeline}
-                    self.__save_match_raw_data(data=data, save_dir=save_dir)
+                try:
+                    if LEAGUES_DATA_DICT[self.league]['official']:
+                        id1 = item.split('#')[0]
+                        tr = item.split('#')[1]
+                        hash1 = item.split('#')[2]
+                        match, timeline = tournament_match_to_dict(id1, hash1, tr)
+                        data = {'match': match, 'timeline': timeline}
+                        self.__save_match_raw_data(data=data, save_dir=save_dir, hash=hash1)
+                    else:
+                        match = self.rw.match.by_id(match_id=item, region=self.region)
+                        timeline = self.rw.match.timeline_by_match(match_id=item, region=self.region)
+                        data = {'match': match, 'timeline': timeline}
+                        self.__save_match_raw_data(data=data, save_dir=save_dir)
+                except HTTPError:
+                    pass
         else:
             print('All games already downloaded.')
 
@@ -99,6 +107,9 @@ class Slds:
         df = pd.read_csv(league_data_path, dtype=LEAGUES_DATA_DICT[self.league]['dtypes'])
         if LEAGUES_DATA_DICT[self.league]['official']:
             return list(df.game_id.map(str) + '#' + df.tournament + '#' + df.hash)
+        elif self.league == 'SOLOQ':
+            ids = list(df.account_id)
+            return self.get_soloq_game_ids(acc_ids=ids)
         return list(df.game_id)
 
     @staticmethod
@@ -159,6 +170,12 @@ class Slds:
         write_json(champs, STATIC_DATA_DIR, file_name='champions')
         write_json(items, STATIC_DATA_DIR, file_name='items')
         write_json(summs, STATIC_DATA_DIR, file_name='summoners')
+
+    def get_soloq_game_ids(self, acc_ids):
+        matches = list(chain.from_iterable(
+            [self.rw.match.matchlist_by_account(account_id=acc, end_index=20, region=self.region, queue=420)['matches']
+             for acc in acc_ids]))
+        return list(set([m['gameId'] for m in matches]))
 
 
 def parse_args():
