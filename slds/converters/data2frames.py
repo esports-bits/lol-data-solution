@@ -1,6 +1,6 @@
 import pandas as pd
 import datetime
-from converters.kwargs2whatever import slo_game_kwargs
+from converters.kwargs2whatever import export_dataset_kwargs
 from config.constants import STATIC_DATA_RELEVANT_COLS, STATIC_DATA_DIR, ITEMS_COLS, SUMMS_COLS, RUNES_COLS, BANS_COLS
 from converters.data2files import read_json
 
@@ -32,9 +32,12 @@ def game_to_dataframe(match, timeline, **kwargs):
         # Runes
         runes = runes_reforged_to_dataframe()
         df4 = df3
-        for name in RUNES_COLS:
-            df4 = df4.merge(runes.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
-                            right_on='id', how='left').drop('id', axis=1)
+        try:
+            for name in RUNES_COLS:
+                df4 = df4.merge(runes.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
+                                right_on='id', how='left').drop('id', axis=1)
+        except KeyError:
+            pass
         # Bans
         df5 = df4
         for name in BANS_COLS:
@@ -54,7 +57,7 @@ def game_to_dataframe(match, timeline, **kwargs):
     df_concat = pd.concat([m_df, ps_ids_df, ps_df, t_df, tl_df], axis=1)
 
     if kwargs:
-        df_result = slo_game_kwargs(df_concat, kwargs)
+        df_result = export_dataset_kwargs(df_concat, kwargs)
     else:
         df_result = df_concat
 
@@ -69,6 +72,10 @@ def game_to_dataframe(match, timeline, **kwargs):
 def game_participants_to_dataframe(participants):
     stats = [p.pop('stats') for p in participants]
     timeline = [p.pop('timeline') for p in participants]
+    if 'masteries' in participants[0]:
+        _ = [p.pop('masteries') for p in participants]
+    if 'runes' in participants[0]:
+        _ = [p.pop('runes') for p in participants]
     df1 = pd.concat([pd.DataFrame(p, index=(i,)) for i, p in enumerate(participants)])
     df2 = pd.concat([pd.DataFrame(s, index=(i,)) for i, s in enumerate(stats)])
     df3 = pd.concat([game_timeline_to_dataframe(t) for i, t in enumerate(timeline)])

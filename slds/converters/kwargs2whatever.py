@@ -1,4 +1,4 @@
-def slo_game_kwargs(df, kwargs):
+def export_dataset_kwargs(df, kwargs):
     if 'custom_names' in kwargs:
         df['player_name'] = kwargs['custom_names']
 
@@ -11,5 +11,11 @@ def slo_game_kwargs(df, kwargs):
 
     if 'week' in kwargs:
         df['week'] = kwargs['week']
+
+    if 'enemy' in kwargs:
+        df['enemy'] = kwargs['enemy']
+
+    if 'game_n' in kwargs:
+        df['game_n'] = kwargs['game_n']
 
     return df
