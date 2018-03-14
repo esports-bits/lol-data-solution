@@ -20,10 +20,14 @@ class Slds:
         self.region = region
         self.league = league
 
-    def generate_dataset(self, read_dir, force_update=False):
-        df = pd.read_csv(LEAGUES_DATA_DICT[self.league]['matches_file_path'],
-                         dtype=LEAGUES_DATA_DICT[self.league]['dtypes'])
-        new = list(df.game_id.unique())
+    def generate_dataset(self, read_dir, force_update=False, **kwargs):
+        if 'game_ids' in kwargs:
+            new = kwargs['game_ids']
+            df = pd.DataFrame(new)
+        else:
+            df = pd.read_csv(LEAGUES_DATA_DICT[self.league]['matches_file_path'],
+                             dtype=LEAGUES_DATA_DICT[self.league]['dtypes'])
+            new = list(df.game_id.unique())
         df2 = pd.DataFrame()
         try:
             df2 = pd.read_csv('{}'.format(LEAGUES_DATA_DICT[self.league]['csv_path']), index_col=0)
@@ -36,9 +40,9 @@ class Slds:
         df_result = pd.DataFrame()
         if not force_update:
             if new_ids:
-                print('There are new ids {}, merging the old data with the new one.'.format(new_ids))
+                print('There are {} new ids, merging the old data with the new one.'.format(len(new_ids)))
                 df3 = df[df.game_id.isin(new_ids)]
-                df4 = self.__concat_games(df3, read_dir)
+                df4 = self.__concat_games(df3, read_dir, kwargs=kwargs)
                 df_result = pd.concat([df2, df4.T.reset_index().drop_duplicates(subset='index',
                                                                                 keep='first').set_index('index').T])
                 return df_result.reset_index(drop=True)
@@ -46,12 +50,12 @@ class Slds:
                 return None
         elif force_update:
             if new_ids:
-                print('Updating current datasets but there are new ids found: {}'.format(new_ids))
-                df_result = self.__concat_games(df, read_dir).T.reset_index()\
+                print('Updating current datasets but there are {} new ids found.'.format(len(new_ids)))
+                df_result = self.__concat_games(df, read_dir, kwargs=kwargs).T.reset_index()\
                     .drop_duplicates(subset='index', keep='first').set_index('index').T
             elif not new_ids:
                 print('Forcing update of the current datasets even though there are not new ids.')
-                df_result = self.__concat_games(df, read_dir).T.reset_index()\
+                df_result = self.__concat_games(df, read_dir, kwargs=kwargs).T.reset_index()\
                     .drop_duplicates(subset='index', keep='first').set_index('index').T
             return df_result.reset_index(drop=True)
 
@@ -109,7 +113,7 @@ class Slds:
             return list(df.game_id.map(str) + '#' + df.tournament + '#' + df.hash)
         elif self.league == 'SOLOQ':
             ids = list(df.account_id)
-            return self.get_soloq_game_ids(acc_ids=ids)
+            return self.__get_soloq_game_ids(acc_ids=ids)
         return list(df.game_id)
 
     @staticmethod
@@ -124,7 +128,7 @@ class Slds:
             return list(set(map(str, new)) - set(map(str, old)))
         return list(set(map(int, new)) - set(map(int, old)))
 
-    def __concat_games(self, df, read_dir):
+    def __concat_games(self, df, read_dir, kwargs):
         if self.league == 'SLO':
             return pd.concat([g2df(match=read_json(save_dir=read_dir,
                                                    file_name=self.__get_file_names_from_match_id(m_id=g[1]['game_id'],
@@ -148,7 +152,7 @@ class Slds:
                                    custom_positions=list(g[1][SCRIMS_POSITIONS_COLS]),
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
-                                   custom=True) for g in df.iterrows()])
+                                   custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n']) for g in df.iterrows()])
         elif self.league == 'LCK':
             return pd.concat([g2df(match=read_json(save_dir=read_dir,
                                                    file_name=self.__get_file_names_from_match_id(m_id=g[1]['game_id'],
@@ -159,6 +163,16 @@ class Slds:
                                                           m_id=g[1]['game_id'], save_dir=read_dir)['tl_filename']),
                                    week=g[1]['week'], custom=False,
                                    custom_positions=STANDARD_POSITIONS) for g in df.iterrows()])
+        elif self.league == 'SOLOQ':
+            return pd.concat([g2df(match=read_json(save_dir=read_dir,
+                                                   file_name=self.__get_file_names_from_match_id(m_id=gid,
+                                                                                                 save_dir=read_dir)
+                                                   ['match_filename']),
+                                   timeline=read_json(save_dir=read_dir,
+                                                      file_name=self.__get_file_names_from_match_id(
+                                                          m_id=gid, save_dir=read_dir)['tl_filename']),
+                                   custom=False
+                                   ) for gid in kwargs['game_ids']])
 
     def save_static_data_files(self):
         versions = self.rw.static_data.versions(region=self.region)
@@ -171,7 +185,7 @@ class Slds:
         write_json(items, STATIC_DATA_DIR, file_name='items')
         write_json(summs, STATIC_DATA_DIR, file_name='summoners')
 
-    def get_soloq_game_ids(self, acc_ids):
+    def __get_soloq_game_ids(self, acc_ids):
         matches = list(chain.from_iterable(
             [self.rw.match.matchlist_by_account(account_id=acc, end_index=20, region=self.region, queue=420)['matches']
              for acc in acc_ids]))
@@ -181,14 +195,14 @@ class Slds:
 def parse_args():
     parser = argparse.ArgumentParser(description='LoL solution to transform match data to DataFrames and CSV firstly '
                                                  'used for SLO.')
-    parser.add_argument('-l', '--league', help='Choose league. [LCK, SLO, SCRIMS]')
+    parser.add_argument('-l', '--league', help='Choose league. {}'.format(SUPPORTED_LEAGUES))
     parser.add_argument('-r', '--region', help='Choose region. [EUW1]')
     parser.add_argument('-ex', '--export', help='Export dataset.', action='store_true')
     parser.add_argument('-X', '--xlsx', help='Export dataset as XLSX.', action='store_true')
     parser.add_argument('-C', '--csv', help='Export dataset as CSV.', action='store_true')
-    parser.add_argument('-dw', '--download', help='Download new data if available.', action='store_true')
+    parser.add_argument('-d', '--download', help='Download new data if available.', action='store_true')
     parser.add_argument('-usd', '--update_static_data', help='Update local files of static data.', action='store_true')
-    parser.add_argument('-fu', '--force_update', help='Force the update of the datasets.', action='store_true')
+    parser.add_argument('-fu', '--force_update', help='Force the update of the exports datasets.', action='store_true')
     return parser.parse_args()
 
 
@@ -210,7 +224,15 @@ def main():
         print("Static data updated.")
     
     if args.export:
-        df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league]['games_path'], force_update=args.force_update)
+        if league == 'SOLOQ':
+            files = os.listdir(LEAGUES_DATA_DICT[league]['games_path'])
+            l1 = [f.split('_')[1] for f in files]
+            ids = list(set([i.split('.')[0] for i in l1]))
+            df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league]['games_path'], force_update=args.force_update,
+                                       game_ids=ids)
+        else:
+            df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league]['games_path'], force_update=args.force_update)
+
         if df is not None:
             if args.xlsx:
                 df.to_excel('{}'.format(LEAGUES_DATA_DICT[league]['excel_path']))
