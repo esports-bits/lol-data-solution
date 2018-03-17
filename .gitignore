@@ -106,3 +106,6 @@ slds/config/constants.py
 slo_datasets/
 slo_data/
 slo_games/
+exports/
+leagues_data/
+matches_raw_data/

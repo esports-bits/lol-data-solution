@@ -2,7 +2,8 @@ from riotwatcher import RiotWatcher
 from converters.data2frames import game_to_dataframe as g2df
 from converters.data2files import write_json, read_json, save_runes_reforged_json
 from config.constants import SCRIMS_POSITIONS_COLS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, \
-    API_KEY, STATIC_DATA_DIR, SUPPORTED_LEAGUES, LEAGUES_DATA_DICT
+    API_KEY, STATIC_DATA_DIR, SUPPORTED_LEAGUES, LEAGUES_DATA_DICT, RAW_DATA_PATH, EXCEL_EXPORT_PATH, CSV_EXPORT_PATH, \
+    IDS_FILE_PATH, DTYPES, OFFICIAL_LEAGUE, CSV_EXPORT_PATH_MERGED, EXCEL_EXPORT_PATH_MERGED
 import pandas as pd
 from datetime import datetime as dt
 from tqdm import tqdm
@@ -23,14 +24,15 @@ class Slds:
     def generate_dataset(self, read_dir, force_update=False, **kwargs):
         if 'game_ids' in kwargs:
             new = kwargs['game_ids']
-            df = pd.DataFrame(new)
+            df = pd.DataFrame({'game_id': new})
         else:
-            df = pd.read_csv(LEAGUES_DATA_DICT[self.league]['matches_file_path'],
-                             dtype=LEAGUES_DATA_DICT[self.league]['dtypes'])
+            df = pd.read_csv(LEAGUES_DATA_DICT[self.league][IDS_FILE_PATH],
+                             dtype=LEAGUES_DATA_DICT[self.league][DTYPES])
             new = list(df.game_id.unique())
         df2 = pd.DataFrame()
         try:
-            df2 = pd.read_csv('{}'.format(LEAGUES_DATA_DICT[self.league]['csv_path']), index_col=0)
+            df2 = pd.read_csv('{}'.format(LEAGUES_DATA_DICT[self.league][CSV_EXPORT_PATH]), index_col=0,
+                              encoding="ISO-8859-1")
             old = list(df2.gameId.unique())
             new_ids = self.__get_new_ids(old, new)
         except FileNotFoundError:
@@ -41,8 +43,11 @@ class Slds:
         if not force_update:
             if new_ids:
                 print('There are {} new ids, merging the old data with the new one.'.format(len(new_ids)))
-                df3 = df[df.game_id.isin(new_ids)]
-                df4 = self.__concat_games(df3, read_dir, kwargs=kwargs)
+                if 'game_ids' not in kwargs:
+                    df3 = df[df.game_id.isin(new_ids)]
+                    df4 = self.__concat_games(df3, read_dir, kwargs={'game_ids': new_ids})
+                else:
+                    df4 = self.__concat_games(pd.DataFrame({'game_id': new_ids}), read_dir, kwargs=kwargs)
                 df_result = pd.concat([df2, df4.T.reset_index().drop_duplicates(subset='index',
                                                                                 keep='first').set_index('index').T])
                 return df_result.reset_index(drop=True)
@@ -57,6 +62,7 @@ class Slds:
                 print('Forcing update of the current datasets even though there are not new ids.')
                 df_result = self.__concat_games(df, read_dir, kwargs=kwargs).T.reset_index()\
                     .drop_duplicates(subset='index', keep='first').set_index('index').T
+
             return df_result.reset_index(drop=True)
 
     def download_games(self, ids, save_dir):
@@ -74,7 +80,7 @@ class Slds:
         if new_ids:
             for item in tqdm(new_ids, desc='Downloading games'):
                 try:
-                    if LEAGUES_DATA_DICT[self.league]['official']:
+                    if LEAGUES_DATA_DICT[self.league][OFFICIAL_LEAGUE]:
                         id1 = item.split('#')[0]
                         tr = item.split('#')[1]
                         hash1 = item.split('#')[2]
@@ -93,7 +99,7 @@ class Slds:
 
     def __save_match_raw_data(self, data, save_dir, **kwargs):
         if isinstance(data, dict):
-            if LEAGUES_DATA_DICT[self.league]['official']:
+            if LEAGUES_DATA_DICT[self.league][OFFICIAL_LEAGUE]:
                 game_id = str(data['match']['gameId']) + '#' + str(data['match']['platformId'] + '#'
                                                                    + str(kwargs['hash']))
             else:
@@ -107,9 +113,9 @@ class Slds:
                             '"timeline": timeline_dict}.')
 
     def get_league_game_ids(self):
-        league_data_path = LEAGUES_DATA_DICT[self.league]['matches_file_path']
-        df = pd.read_csv(league_data_path, dtype=LEAGUES_DATA_DICT[self.league]['dtypes'])
-        if LEAGUES_DATA_DICT[self.league]['official']:
+        league_data_path = LEAGUES_DATA_DICT[self.league][IDS_FILE_PATH]
+        df = pd.read_csv(league_data_path, dtype=LEAGUES_DATA_DICT[self.league][DTYPES])
+        if LEAGUES_DATA_DICT[self.league][OFFICIAL_LEAGUE]:
             return list(df.game_id.map(str) + '#' + df.tournament + '#' + df.hash)
         elif self.league == 'SOLOQ':
             ids = list(df.account_id)
@@ -124,8 +130,8 @@ class Slds:
         return {'match_filename': match_filename.split('.')[0], 'tl_filename': tl_filename.split('.')[0]}
 
     def __get_new_ids(self, old, new):
-        if LEAGUES_DATA_DICT[self.league]['official']:
-            return list(set(map(str, new)) - set(map(str, old)))
+        if LEAGUES_DATA_DICT[self.league][OFFICIAL_LEAGUE]:
+            return list(set(map(int, new)) - set(map(int, old)))
         return list(set(map(int, new)) - set(map(int, old)))
 
     def __concat_games(self, df, read_dir, kwargs):
@@ -172,7 +178,7 @@ class Slds:
                                                       file_name=self.__get_file_names_from_match_id(
                                                           m_id=gid, save_dir=read_dir)['tl_filename']),
                                    custom=False
-                                   ) for gid in kwargs['game_ids']])
+                                   ) for gid in list(df.game_id)])
 
     def save_static_data_files(self):
         versions = self.rw.static_data.versions(region=self.region)
@@ -187,22 +193,25 @@ class Slds:
 
     def __get_soloq_game_ids(self, acc_ids):
         matches = list(chain.from_iterable(
-            [self.rw.match.matchlist_by_account(account_id=acc, end_index=20, region=self.region, queue=420)['matches']
+            [self.rw.match.matchlist_by_account(account_id=acc, begin_index=0, end_index=20, region=self.region,
+                                                queue=420)['matches']
              for acc in acc_ids]))
-        return list(set([m['gameId'] for m in matches]))
+        result = list(set([m['gameId'] for m in matches]))
+        return result
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='LoL solution to transform match data to DataFrames and CSV firstly '
-                                                 'used for SLO.')
+    parser = argparse.ArgumentParser(description='LoL solution to generate datasets from leagues, scrims and solo Q LoL'
+                                                 ' matches.')
     parser.add_argument('-l', '--league', help='Choose league. {}'.format(SUPPORTED_LEAGUES))
-    parser.add_argument('-r', '--region', help='Choose region. [EUW1]')
-    parser.add_argument('-ex', '--export', help='Export dataset.', action='store_true')
+    parser.add_argument('-r', '--region', help='Choose region. [EUW1, NA, NA1...]')
+    parser.add_argument('-e', '--export', help='Export dataset.', action='store_true')
+    parser.add_argument('-d', '--download', help='Download new data if available.', action='store_true')
     parser.add_argument('-X', '--xlsx', help='Export dataset as XLSX.', action='store_true')
     parser.add_argument('-C', '--csv', help='Export dataset as CSV.', action='store_true')
-    parser.add_argument('-d', '--download', help='Download new data if available.', action='store_true')
     parser.add_argument('-usd', '--update_static_data', help='Update local files of static data.', action='store_true')
     parser.add_argument('-fu', '--force_update', help='Force the update of the exports datasets.', action='store_true')
+    parser.add_argument('-ms', '--merge_soloq', help='Merge SoloQ dataset with info of players.', action='store_true')
     return parser.parse_args()
 
 
@@ -216,7 +225,7 @@ def main():
     slds = Slds(region='EUW1', league=league)
     if args.download:
         ids = slds.get_league_game_ids()
-        slds.download_games(ids=ids, save_dir=LEAGUES_DATA_DICT[league]['games_path'])
+        slds.download_games(ids=ids, save_dir=LEAGUES_DATA_DICT[league][RAW_DATA_PATH])
         print("Games downloaded.")
     
     if args.update_static_data:
@@ -225,25 +234,35 @@ def main():
     
     if args.export:
         if league == 'SOLOQ':
-            files = os.listdir(LEAGUES_DATA_DICT[league]['games_path'])
+            files = os.listdir(LEAGUES_DATA_DICT[league][RAW_DATA_PATH])
             l1 = [f.split('_')[1] for f in files]
-            ids = list(set([i.split('.')[0] for i in l1]))
-            df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league]['games_path'], force_update=args.force_update,
+            ids = list(map(int, set([i.split('.')[0] for i in l1])))
+            df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league][RAW_DATA_PATH], force_update=args.force_update,
                                        game_ids=ids)
         else:
-            df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league]['games_path'], force_update=args.force_update)
+            df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league][RAW_DATA_PATH], force_update=args.force_update)
 
         if df is not None:
             if args.xlsx:
-                df.to_excel('{}'.format(LEAGUES_DATA_DICT[league]['excel_path']))
+                df.to_excel('{}'.format(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH]))
             if args.csv:
-                df.to_csv('{}'.format(LEAGUES_DATA_DICT[league]['csv_path']))
+                df.to_csv('{}'.format(LEAGUES_DATA_DICT[league][CSV_EXPORT_PATH]))
             if not args.csv and not args.xlsx:
-                df.to_excel('{}'.format(LEAGUES_DATA_DICT[league]['excel_path']))
-                df.to_csv('{}'.format(LEAGUES_DATA_DICT[league]['csv_path']))
+                df.to_excel('{}'.format(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH]))
+                df.to_csv('{}'.format(LEAGUES_DATA_DICT[league][CSV_EXPORT_PATH]))
             print("Export finished.")
         else:
             print("No export done.")
+
+    if args.merge_soloq and league == 'SOLOQ':
+        df1 = pd.read_csv(LEAGUES_DATA_DICT['SOLOQ'][IDS_FILE_PATH], encoding='ISO-8859-1',
+                          dtype=LEAGUES_DATA_DICT['SOLOQ']['dtypes'])
+        df2 = pd.read_csv(LEAGUES_DATA_DICT['SOLOQ'][CSV_EXPORT_PATH], index_col=0, encoding='ISO-8859-1')
+        df3 = df2[pd.notnull(df2.currentAccountId)]
+        df3.currentAccountId = df3.currentAccountId.map(int)
+        df4 = df3.merge(df1, left_on='currentAccountId', right_on='account_id', how='left')
+        df4.to_csv(LEAGUES_DATA_DICT['SOLOQ'][CSV_EXPORT_PATH_MERGED])
+        df4.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH_MERGED])
 
 
 if __name__ == '__main__':
