@@ -72,10 +72,18 @@ def game_to_dataframe(match, timeline, **kwargs):
 def game_participants_to_dataframe(participants):
     stats = [p.pop('stats') for p in participants]
     timeline = [p.pop('timeline') for p in participants]
-    if 'masteries' in participants[0]:
-        _ = [p.pop('masteries') for p in participants]
-    if 'runes' in participants[0]:
-        _ = [p.pop('runes') for p in participants]
+
+    # Old matches
+    for p in participants:
+        try:
+            _ = p.pop('masteries')
+        except KeyError:
+            pass
+        try:
+            _ = p.pop('runes')
+        except KeyError:
+            pass
+
     df1 = pd.concat([pd.DataFrame(p, index=(i,)) for i, p in enumerate(participants)])
     df2 = pd.concat([pd.DataFrame(s, index=(i,)) for i, s in enumerate(stats)])
     df3 = pd.concat([game_timeline_to_dataframe(t) for i, t in enumerate(timeline)])
@@ -84,9 +92,16 @@ def game_participants_to_dataframe(participants):
 
 def game_participant_ids_to_dataframe(participant_ids, custom):
     if not custom:
-        return pd.concat([pd.DataFrame({'participantId': p['participantId'],
-                                        'summonerName': p['player']['summonerName']},
-                                       index=(i,)) for i, p in enumerate(participant_ids)])
+        # Not good. Have to change it to support and adapt to further changes.
+        try:
+            return pd.concat([pd.DataFrame({'participantId': p['participantId'],
+                                            'summonerName': p['player']['summonerName'],
+                                            'accountId': p['player']['accountId'],
+                                            'currentAccountId': p['player']['currentAccountId'],
+                                            'summonerId': p['player']['summonerId']},
+                                           index=(i,)) for i, p in enumerate(participant_ids)])
+        except KeyError:
+            pass
     return pd.concat([pd.DataFrame(p_id, index=(i,)) for i, p_id in enumerate(participant_ids)])
 
 
@@ -272,7 +287,7 @@ def timeline_relevant_stats_to_dataframe(timeline):
                 'ttlvl6': l6lvl[0] if l6lvl else None, 'ttlvl11': l11lvl[0] if l11lvl else None,
                 'gold_at_5': g5[0] if g5 else None, 'gold_at_10': g10[0] if g10 else None,
                 'gold_at_15': g15[0] if g15 else None, 'gold_at_20': g20[0] if g20 else None,
-                'ccs_at_5': ccs5[0] if ccs5 else None, 'ccs_at_10': ccs10[0] if ccs5 else None,
+                'ccs_at_5': ccs5[0] if ccs5 else None, 'ccs_at_10': ccs10[0] if ccs10 else None,
                 'ccs_at_15': ccs15[0] if ccs15 else None, 'ccs_at_20': ccs20[0] if ccs20 else None}
 
     stats = timeline_participant_stats_to_dataframe(timeline)
