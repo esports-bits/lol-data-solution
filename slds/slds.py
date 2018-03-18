@@ -263,6 +263,7 @@ def main():
         df4 = df3.merge(df1, left_on='currentAccountId', right_on='account_id', how='left')
         df4.to_csv(LEAGUES_DATA_DICT['SOLOQ'][CSV_EXPORT_PATH_MERGED])
         df4.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH_MERGED])
+        print("Solo Q data merged with pro players data.")
 
 
 if __name__ == '__main__':
