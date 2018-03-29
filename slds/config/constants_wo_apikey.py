@@ -48,37 +48,46 @@ DTYPES = 'dtypes'
 EXCEL_EXPORT_PATH = 'excel_export_path'
 CSV_EXPORT_PATH = 'csv_export_path'
 OFFICIAL_LEAGUE = 'official_league'
-LEAGUES_DATA_DICT = {LCK: {IDS_FILE_PATH: LCK_MATCHES_FILE_PATH,
-                           RAW_DATA_PATH: LCK_GAMES_DIR,
-                           OFFICIAL_LEAGUE: True,
-                           DTYPES: {},
-                           CSV_EXPORT_PATH: LCK_DATASET_CSV,
-                           EXCEL_EXPORT_PATH: LCK_DATASET_XLSX},
-                     SLO: {IDS_FILE_PATH: SLO_MATCHES_FILE_PATH,
-                           RAW_DATA_PATH: SLO_GAMES_DIR,
-                           OFFICIAL_LEAGUE: False,
-                           DTYPES: {'datetime': str, 'series_id': str, 'week': int, 'event': str, 'game': int,
-                                      'game_id': np.int64, 'blue': str, 'red': str, 'blue_win': int, 'p_1': str,
-                                      'p_2': str, 'p_3': str, 'p_4': str, 'p_5': str, 'p_6': str, 'p_7': str,
-                                      'p_8': str, 'p_9': str, 'p_10': str},
-                           CSV_EXPORT_PATH: SLO_DATASET_CSV,
-                           EXCEL_EXPORT_PATH: SLO_DATASET_XLSX},
-                     SCRIMS: {IDS_FILE_PATH: SCRIMS_MATCHES_FILE_PATH,
-                              RAW_DATA_PATH: SCRIMS_GAMES_DIR,
-                              OFFICIAL_LEAGUE: False,
-                              DTYPES: {'date': str, 'enemy': str, 'game_id': np.int64, 'match_history': str,
-                                         'blue': str, 'red': str,
-                                         'pos_1': str, 'pos_2': str, 'pos_3': str, 'pos_4': str, 'pos_5': str,
-                                         'pos_6': str, 'pos_7': str, 'pos_8': str, 'pos_9': str, 'pos_10': str,
-                                         'p_1': str, 'p_2': str, 'p_3': str, 'p_4': str, 'p_5': str, 'p_6': str,
-                                         'p_7': str, 'p_8': str, 'p_9': str, 'p_10': str},
-                              CSV_EXPORT_PATH: SCRIMS_DATASET_CSV,
-                              EXCEL_EXPORT_PATH: SCRIMS_DATASET_XLSX},
-                     SOLOQ: {IDS_FILE_PATH: SOLOQ_MATCHES_FILE_PATH,
-                             RAW_DATA_PATH: SOLOQ_GAMES_DIR,
-                             OFFICIAL_LEAGUE: False,
-                             DTYPES: {},
-                             CSV_EXPORT_PATH: SOLOQ_DATASET_CSV,
-                             EXCEL_EXPORT_PATH: SOLOQ_DATASET_XLSX}
-                     }
+CSV_EXPORT_PATH_MERGED = 'csv_export_path_merged'
+EXCEL_EXPORT_PATH_MERGED = 'excel_export_path_merged'
+LEAGUES_DATA_DICT = {
+    LCK: {
+        IDS_FILE_PATH: LCK_MATCHES_FILE_PATH,
+        RAW_DATA_PATH: LCK_GAMES_DIR,
+        OFFICIAL_LEAGUE: True,
+        DTYPES: {},
+        CSV_EXPORT_PATH: LCK_DATASET_CSV,
+        EXCEL_EXPORT_PATH: LCK_DATASET_XLSX},
+    SLO: {
+        IDS_FILE_PATH: SLO_MATCHES_FILE_PATH,
+        RAW_DATA_PATH: SLO_GAMES_DIR,
+        OFFICIAL_LEAGUE: False,
+        DTYPES: {'datetime': str, 'series_id': str, 'week': int, 'event': str, 'game': int,
+                 'game_id': np.int64, 'blue': str, 'red': str, 'blue_win': int, 'p_1': str,
+                 'p_2': str, 'p_3': str, 'p_4': str, 'p_5': str, 'p_6': str, 'p_7': str,
+                 'p_8': str, 'p_9': str, 'p_10': str},
+        CSV_EXPORT_PATH: SLO_DATASET_CSV,
+        EXCEL_EXPORT_PATH: SLO_DATASET_XLSX},
+    SCRIMS: {
+        IDS_FILE_PATH: SCRIMS_MATCHES_FILE_PATH,
+        RAW_DATA_PATH: SCRIMS_GAMES_DIR,
+        OFFICIAL_LEAGUE: False,
+        DTYPES: {'date': str, 'enemy': str, 'game_id': np.int64, 'match_history': str,
+                 'blue': str, 'red': str, 'pos_1': str, 'pos_2': str, 'pos_3': str, 'pos_4': str,
+                 'pos_5': str,'pos_6': str, 'pos_7': str, 'pos_8': str, 'pos_9': str, 'pos_10': str,
+                 'p_1': str, 'p_2': str, 'p_3': str, 'p_4': str, 'p_5': str, 'p_6': str,'p_7': str,
+                 'p_8': str, 'p_9': str, 'p_10': str},
+        CSV_EXPORT_PATH: SCRIMS_DATASET_CSV,
+        EXCEL_EXPORT_PATH: SCRIMS_DATASET_XLSX},
+    SOLOQ: {
+        IDS_FILE_PATH: SOLOQ_MATCHES_FILE_PATH,
+        RAW_DATA_PATH: SOLOQ_GAMES_DIR,
+        OFFICIAL_LEAGUE: False,
+        DTYPES: {},
+        CSV_EXPORT_PATH: SOLOQ_DATASET_CSV,
+        EXCEL_EXPORT_PATH: SOLOQ_DATASET_XLSX,
+        CSV_EXPORT_PATH_MERGED: EXPORTS_DIR + 'soloq_dataset_merged.csv',
+        EXCEL_EXPORT_PATH_MERGED: EXPORTS_DIR + 'soloq_dataset_merged.xlsx'
+    }
+}
 SUPPORTED_LEAGUES = list(LEAGUES_DATA_DICT.keys())

@@ -18,4 +18,7 @@ def export_dataset_kwargs(df, kwargs):
     if 'game_n' in kwargs:
         df['game_n'] = kwargs['game_n']
 
+    if 'blue_win' in kwargs:
+        df['blue_win'] = kwargs['blue_win']
+
     return df
