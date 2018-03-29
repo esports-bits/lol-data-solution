@@ -47,8 +47,6 @@ def game_to_dataframe(match, timeline, **kwargs):
         return df5
 
     # def calculate_diffs(df):
-
-
     participants = match.pop('participants')
     participant_ids = match.pop('participantIdentities')
     teams = match.pop('teams')

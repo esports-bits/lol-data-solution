@@ -45,9 +45,9 @@ class Slds:
                 print('There are {} new ids, merging the old data with the new one.'.format(len(new_ids)))
                 if 'game_ids' not in kwargs:
                     df3 = df[df.game_id.isin(new_ids)]
-                    df4 = self.__concat_games(df3, read_dir, kwargs={'game_ids': new_ids})
+                    df4 = self.__concat_games(df3, read_dir)
                 else:
-                    df4 = self.__concat_games(pd.DataFrame({'game_id': new_ids}), read_dir, kwargs=kwargs)
+                    df4 = self.__concat_games(pd.DataFrame({'game_id': new_ids}), read_dir)
                 df_result = pd.concat([df2, df4.T.reset_index().drop_duplicates(subset='index',
                                                                                 keep='first').set_index('index').T])
                 return df_result.reset_index(drop=True)
@@ -56,11 +56,11 @@ class Slds:
         elif force_update:
             if new_ids:
                 print('Updating current datasets but there are {} new ids found.'.format(len(new_ids)))
-                df_result = self.__concat_games(df, read_dir, kwargs=kwargs).T.reset_index()\
+                df_result = self.__concat_games(df, read_dir).T.reset_index()\
                     .drop_duplicates(subset='index', keep='first').set_index('index').T
             elif not new_ids:
                 print('Forcing update of the current datasets even though there are not new ids.')
-                df_result = self.__concat_games(df, read_dir, kwargs=kwargs).T.reset_index()\
+                df_result = self.__concat_games(df, read_dir).T.reset_index()\
                     .drop_duplicates(subset='index', keep='first').set_index('index').T
 
             return df_result.reset_index(drop=True)
@@ -134,7 +134,7 @@ class Slds:
             return list(set(map(int, new)) - set(map(int, old)))
         return list(set(map(int, new)) - set(map(int, old)))
 
-    def __concat_games(self, df, read_dir, kwargs):
+    def __concat_games(self, df, read_dir):
         if self.league == 'SLO':
             return pd.concat([g2df(match=read_json(save_dir=read_dir,
                                                    file_name=self.__get_file_names_from_match_id(m_id=g[1]['game_id'],
@@ -158,7 +158,8 @@ class Slds:
                                    custom_positions=list(g[1][SCRIMS_POSITIONS_COLS]),
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
-                                   custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n']) for g in df.iterrows()])
+                                   custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n'], blue_win=g[1]['blue_win']
+                                   ) for g in df.iterrows()])
         elif self.league == 'LCK':
             return pd.concat([g2df(match=read_json(save_dir=read_dir,
                                                    file_name=self.__get_file_names_from_match_id(m_id=g[1]['game_id'],
