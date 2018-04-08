@@ -3,7 +3,8 @@ from converters.data2frames import game_to_dataframe as g2df
 from converters.data2files import write_json, read_json, save_runes_reforged_json
 from config.constants import SCRIMS_POSITIONS_COLS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, \
     API_KEY, STATIC_DATA_DIR, SUPPORTED_LEAGUES, LEAGUES_DATA_DICT, RAW_DATA_PATH, EXCEL_EXPORT_PATH, CSV_EXPORT_PATH, \
-    IDS_FILE_PATH, DTYPES, OFFICIAL_LEAGUE, CSV_EXPORT_PATH_MERGED, EXCEL_EXPORT_PATH_MERGED
+    IDS_FILE_PATH, DTYPES, OFFICIAL_LEAGUE, CSV_EXPORT_PATH_MERGED, EXCEL_EXPORT_PATH_MERGED, EXPORTS_DIR, \
+    LEAGUES_DATA_DIR, MATCHES_RAW_DATA_DIR, SLO_GAMES_DIR, LCK_GAMES_DIR, SOLOQ_GAMES_DIR, SCRIMS_GAMES_DIR
 import pandas as pd
 from datetime import datetime as dt
 from tqdm import tqdm
@@ -112,14 +113,14 @@ class Slds:
             raise TypeError('Dict expected at data param. Should be passed as shown here: {"match": match_dict, '
                             '"timeline": timeline_dict}.')
 
-    def get_league_game_ids(self):
+    def get_league_game_ids(self, **kwargs):
         league_data_path = LEAGUES_DATA_DICT[self.league][IDS_FILE_PATH]
         df = pd.read_csv(league_data_path, dtype=LEAGUES_DATA_DICT[self.league][DTYPES])
         if LEAGUES_DATA_DICT[self.league][OFFICIAL_LEAGUE]:
             return list(df.game_id.map(str) + '#' + df.tournament + '#' + df.hash)
         elif self.league == 'SOLOQ':
             ids = list(df.account_id)
-            return self.__get_soloq_game_ids(acc_ids=ids)
+            return self.__get_soloq_game_ids(acc_ids=ids, n_games=kwargs['n_games'])
         return list(df.game_id)
 
     @staticmethod
@@ -192,9 +193,9 @@ class Slds:
         write_json(items, STATIC_DATA_DIR, file_name='items')
         write_json(summs, STATIC_DATA_DIR, file_name='summoners')
 
-    def __get_soloq_game_ids(self, acc_ids):
+    def __get_soloq_game_ids(self, acc_ids, n_games=20):
         matches = list(chain.from_iterable(
-            [self.rw.match.matchlist_by_account(account_id=acc, begin_index=0, end_index=20, region=self.region,
+            [self.rw.match.matchlist_by_account(account_id=acc, begin_index=0, end_index=n_games, region=self.region,
                                                 queue=420)['matches']
              for acc in acc_ids]))
         result = list(set([m['gameId'] for m in matches]))
@@ -213,10 +214,38 @@ def parse_args():
     parser.add_argument('-usd', '--update_static_data', help='Update local files of static data.', action='store_true')
     parser.add_argument('-fu', '--force_update', help='Force the update of the exports datasets.', action='store_true')
     parser.add_argument('-ms', '--merge_soloq', help='Merge SoloQ dataset with info of players.', action='store_true')
+    parser.add_argument('-ng', '--n_games', help='Set the number of games to download from Solo Q.')
     return parser.parse_args()
 
 
+def create_dirs():
+    if not os.path.exists(EXPORTS_DIR):
+        os.makedirs(EXPORTS_DIR)
+
+    if not os.path.exists(LEAGUES_DATA_DIR):
+        os.makedirs(LEAGUES_DATA_DIR)
+
+    if not os.path.exists(MATCHES_RAW_DATA_DIR):
+        os.makedirs(MATCHES_RAW_DATA_DIR)
+
+    if not os.path.exists(STATIC_DATA_DIR):
+        os.makedirs(STATIC_DATA_DIR)
+
+    if not os.path.exists(LCK_GAMES_DIR):
+        os.makedirs(LCK_GAMES_DIR)
+
+    if not os.path.exists(SLO_GAMES_DIR):
+        os.makedirs(SLO_GAMES_DIR)
+
+    if not os.path.exists(SOLOQ_GAMES_DIR):
+        os.makedirs(SOLOQ_GAMES_DIR)
+
+    if not os.path.exists(SCRIMS_GAMES_DIR):
+        os.makedirs(SCRIMS_GAMES_DIR)
+
+
 def main():
+    create_dirs()
     args = parse_args()
     league = args.league.upper()
     if league not in SUPPORTED_LEAGUES:
@@ -225,7 +254,14 @@ def main():
     
     slds = Slds(region='EUW1', league=league)
     if args.download:
-        ids = slds.get_league_game_ids()
+        if league == 'SOLOQ':
+            if args.n_games:
+                n_games = args.n_games
+            else:
+                n_games = 20
+            ids = slds.get_league_game_ids(n_games=n_games)
+        else:
+            ids = slds.get_league_game_ids()
         slds.download_games(ids=ids, save_dir=LEAGUES_DATA_DICT[league][RAW_DATA_PATH])
         print("Games downloaded.")
     
