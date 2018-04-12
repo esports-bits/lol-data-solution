@@ -15,6 +15,22 @@ SLO_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'slo_spring_S8.csv'
 LCK_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'lck_spring_S8.csv'
 SCRIMS_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'scrims.csv'
 SOLOQ_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'soloq.csv'
+SLO_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
+                                 '{ID of the document}' \
+                                 '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
+                                 'sheet={Sheet name}'
+LCK_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
+                                 '{ID of the document}' \
+                                 '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
+                                 'sheet={Sheet name}'
+SCRIMS_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
+                                    '{ID of the document}' \
+                                    '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
+                                    'sheet={Sheet name}'
+SOLOQ_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
+                                   '{ID of the document}' \
+                                   '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
+                                   'sheet={Sheet name}'
 SLO_DATASET_CSV = EXPORTS_DIR + 'slo_dataset.csv'
 SLO_DATASET_XLSX = EXPORTS_DIR + 'slo_dataset.xlsx'
 LCK_DATASET_CSV = EXPORTS_DIR + 'lck_dataset.csv'

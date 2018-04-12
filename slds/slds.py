@@ -274,10 +274,11 @@ def main():
             files = os.listdir(LEAGUES_DATA_DICT[league][RAW_DATA_PATH])
             l1 = [f.split('_')[1] for f in files]
             ids = list(map(int, set([i.split('.')[0] for i in l1])))
-            df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league][RAW_DATA_PATH], force_update=args.force_update,
-                                       game_ids=ids)
+            df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league][RAW_DATA_PATH],
+                                       force_update=args.force_update, game_ids=ids)
         else:
-            df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league][RAW_DATA_PATH], force_update=args.force_update)
+            df = slds.generate_dataset(read_dir=LEAGUES_DATA_DICT[league][RAW_DATA_PATH],
+                                       force_update=args.force_update)
 
         if df is not None:
             if args.xlsx:
