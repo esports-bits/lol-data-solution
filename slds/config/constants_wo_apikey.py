@@ -16,21 +16,21 @@ LCK_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'lck_spring_S8.csv'
 SCRIMS_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'scrims.csv'
 SOLOQ_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'soloq.csv'
 SLO_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                 '{ID of the document}' \
-                                 '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
-                                 'sheet={Sheet name}'
+                                 '{doc_id}' \
+                                 '/gviz/tq?tqx=out:csv&' \
+                                 'sheet={sheet}'
 LCK_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                 '{ID of the document}' \
-                                 '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
-                                 'sheet={Sheet name}'
+                                 '{doc_id}' \
+                                 '/gviz/tq?tqx=out:csv&' \
+                                 'sheet={sheet}'
 SCRIMS_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                    '{ID of the document}' \
-                                    '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
-                                    'sheet={Sheet name}'
+                                    '{doc_id}' \
+                                    '/gviz/tq?tqx=out:csv&' \
+                                    'sheet={sheet}'
 SOLOQ_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                   '{ID of the document}' \
-                                   '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
-                                   'sheet={Sheet name}'
+                                   '{doc_id}' \
+                                   '/gviz/tq?tqx=out:csv&' \
+                                   'sheet={sheet}'
 SLO_DATASET_CSV = EXPORTS_DIR + 'slo_dataset.csv'
 SLO_DATASET_XLSX = EXPORTS_DIR + 'slo_dataset.xlsx'
 LCK_DATASET_CSV = EXPORTS_DIR + 'lck_dataset.csv'
@@ -106,4 +106,18 @@ LEAGUES_DATA_DICT = {
         EXCEL_EXPORT_PATH_MERGED: EXPORTS_DIR + 'soloq_dataset_merged.xlsx'
     }
 }
+
+FS = 'FS'
+DB = 'DB'
+CONNECTORS_DATA_DICT = {
+    FS: {},
+    DB: {}
+}
 SUPPORTED_LEAGUES = list(LEAGUES_DATA_DICT.keys())
+SUPPORTED_CONNECTORS = list(CONNECTORS_DATA_DICT.keys())
+
+EXPORTS_DB_NAME = 'exports'
+LEAGUES_DB_NAME = 'leagues_info'
+SQL_EXPORTS_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': EXPORTS_DB_NAME}
+SQL_LEAGUES_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': LEAGUES_DB_NAME}
+MONGODB_CREDENTIALS = 'mongodb://localhost:27017/'

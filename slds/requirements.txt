@@ -1,3 +1,5 @@
+mysql
+pymongo
 pandas
 tqdm
 riotwatcher
