@@ -1,4 +1,5 @@
 import numpy as np
+from pandas import read_csv
 
 API_KEY = ""
 
@@ -121,3 +122,8 @@ LEAGUES_DB_NAME = 'leagues_info'
 SQL_EXPORTS_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': EXPORTS_DB_NAME}
 SQL_LEAGUES_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': LEAGUES_DB_NAME}
 MONGODB_CREDENTIALS = 'mongodb://localhost:27017/'
+
+SUPPORTED_TEAM_NAMES = read_csv(LEAGUES_DATA_DICT[SOLOQ][IDS_FILE_PATH], index_col=0, encoding='ISO-8859-1').team_name\
+    .unique()
+SUPPORTED_TEAM_ABBVS = read_csv(LEAGUES_DATA_DICT[SOLOQ][IDS_FILE_PATH], index_col=0, encoding='ISO-8859-1').team_abbv\
+    .unique()
