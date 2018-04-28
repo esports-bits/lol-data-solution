@@ -119,7 +119,11 @@ class FileSystem:
             return list(df.game_id.map(str) + '#' + df.tournament + '#' + df.hash)
         elif self.league == 'SOLOQ':
             ids = list(df.account_id)
-            return self.__get_soloq_game_ids(acc_ids=ids, n_games=kwargs['n_games'])
+            if 'begin_index' in kwargs:
+                begin_index = kwargs['begin_index']
+            else:
+                begin_index = 0
+            return self.__get_soloq_game_ids(acc_ids=ids, n_games=kwargs['n_games'], begin_index=begin_index)
         return list(df.game_id)
 
     @staticmethod
@@ -191,10 +195,20 @@ class FileSystem:
         write_json(items, STATIC_DATA_DIR, file_name='items')
         write_json(summs, STATIC_DATA_DIR, file_name='summoners')
 
-    def __get_soloq_game_ids(self, acc_ids, n_games=20):
+    def __get_soloq_game_ids(self, acc_ids, **kwargs):
+        if 'n_games' in kwargs:
+            n_games = kwargs['n_games']
+        else:
+            n_games = 20
+
+        if 'begin_index' in kwargs:
+            begin_index = kwargs['begin_index']
+        else:
+            begin_index = 0
         matches = list(chain.from_iterable(
-            [self.rw.match.matchlist_by_account(account_id=acc, begin_index=0, end_index=n_games, region=self.region,
-                                                queue=420)['matches']
+            [self.rw.match.matchlist_by_account(account_id=acc, begin_index=begin_index,
+                                                end_index=int(begin_index)+int(n_games),
+                                                region=self.region, queue=420)['matches']
              for acc in acc_ids]))
         result = list(set([m['gameId'] for m in matches]))
         return result
@@ -240,7 +254,12 @@ def parse_args(args):
                 n_games = args.n_games
             else:
                 n_games = 20
-            ids = fs.get_league_game_ids(n_games=n_games)
+
+            if args.begin_index:
+                begin_index = args.begin_index
+            else:
+                begin_index = 0
+            ids = fs.get_league_game_ids(n_games=n_games, begin_index=begin_index)
         else:
             ids = fs.get_league_game_ids()
         fs.download_games(ids=ids, save_dir=LEAGUES_DATA_DICT[league][RAW_DATA_PATH])

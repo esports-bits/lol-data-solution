@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('-ng', '--n_games', help='Set the number of games to download from Solo Q.')
     parser.add_argument('-C', '--connector', help='Selects between supported connectors such as '
                                                   'File System or Data Base. {}'.format(SUPPORTED_CONNECTORS))
+    parser.add_argument('-bi', '--begin_index', help='Set the begin index of the Solo Q downloads.')
     return parser.parse_args()
 
 
