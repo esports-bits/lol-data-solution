@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-import mysql.connector as mariadb
+import pymysql.cursors
 from pymongo import MongoClient
 from config.constants import RAW_DATA_PATH, EXCEL_EXPORT_PATH, CSV_EXPORT_PATH_MERGED, EXCEL_EXPORT_PATH_MERGED, \
     LEAGUES_DATA_DICT, CSV_EXPORT_PATH, IDS_FILE_PATH, SQL_EXPORTS_CONN, SQL_LEAGUES_CONN, MONGODB_CREDENTIALS
@@ -12,8 +12,8 @@ class DataBase:
         self.league = league
         self.mongo_conn = MongoClient(MONGODB_CREDENTIALS)
         self.mongo_db = self.mongo_conn.slds
-        self.sql_exports_conn = mariadb.connect(**SQL_EXPORTS_CONN)
-        self.sql_leagues_conn = mariadb.connect(**SQL_LEAGUES_CONN)
+        self.sql_exports_conn = pymysql.connect(**SQL_EXPORTS_CONN)
+        self.sql_leagues_conn = pymysql.connect(**SQL_LEAGUES_CONN)
 
     def get_league_game_ids(self, **kwargs):
         if self.league == 'SOLOQ':
