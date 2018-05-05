@@ -1,8 +1,7 @@
 import os
 import argparse
 from connectors import filesystem, database
-from config.constants import STATIC_DATA_DIR, SUPPORTED_LEAGUES, EXPORTS_DIR, LEAGUES_DATA_DIR, MATCHES_RAW_DATA_DIR, SLO_GAMES_DIR, \
-    LCK_GAMES_DIR, SOLOQ_GAMES_DIR, SCRIMS_GAMES_DIR, SUPPORTED_CONNECTORS
+from config.constants import SUPPORTED_LEAGUES, SUPPORTED_CONNECTORS, SUPPORTED_TEAM_NAMES, SUPPORTED_TEAM_ABBVS
 
 
 def parse_args():
@@ -21,6 +20,12 @@ def parse_args():
     parser.add_argument('-C', '--connector', help='Selects between supported connectors such as '
                                                   'File System or Data Base. {}'.format(SUPPORTED_CONNECTORS))
     parser.add_argument('-bi', '--begin_index', help='Set the begin index of the Solo Q downloads.')
+    parser.add_argument('-ta', '--team_abbv', help='Work with the data of one or more teams selected through his '
+                                                   'abbreviation. Team abbreviations on DB: '
+                                                   '{}'.format(SUPPORTED_TEAM_ABBVS))
+    parser.add_argument('-tn', '--team_name', help='Work with the data of one or more teams selected through his '
+                                                   'name. Team names on DB: '
+                                                   '{}'.format(SUPPORTED_TEAM_ABBVS))
     return parser.parse_args()
 
 
