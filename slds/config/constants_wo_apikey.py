@@ -114,6 +114,7 @@ CONNECTORS_DATA_DICT = {
     FS: {},
     DB: {}
 }
+
 SUPPORTED_LEAGUES = list(LEAGUES_DATA_DICT.keys())
 SUPPORTED_CONNECTORS = list(CONNECTORS_DATA_DICT.keys())
 
@@ -123,7 +124,19 @@ SQL_EXPORTS_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database':
 SQL_LEAGUES_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': LEAGUES_DB_NAME}
 MONGODB_CREDENTIALS = 'mongodb://localhost:27017/'
 
-SUPPORTED_TEAM_NAMES = read_csv(LEAGUES_DATA_DICT[SOLOQ][IDS_FILE_PATH], index_col=0, encoding='ISO-8859-1').team_name\
-    .unique()
-SUPPORTED_TEAM_ABBVS = read_csv(LEAGUES_DATA_DICT[SOLOQ][IDS_FILE_PATH], index_col=0, encoding='ISO-8859-1').team_abbv\
-    .unique()
+REGIONS = {
+    'BR': 'BR1',
+    'EUNE': 'EUNE1',
+    'EUW': 'EUW1',
+    'JP': 'JP1',
+    'KR': 'KR',
+    'LAN': 'LA1',
+    'LAS': 'LA2',
+    'NA': ['NA1', 'NA'],
+    'OCE': 'OC1',
+    'TR': 'TR1',
+    'RU': 'RU',
+    'PBE': 'PBE1'
+}
+
+DEFAULT_REGION = REGIONS['EUW']

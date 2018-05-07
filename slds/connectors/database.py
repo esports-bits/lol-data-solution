@@ -1,7 +1,5 @@
 import urllib.request
 import json
-import pandas as pd
-import os
 import pymysql.cursors
 from pymongo import MongoClient
 from itertools import chain
@@ -9,7 +7,7 @@ from riotwatcher import RiotWatcher
 from tqdm import tqdm
 from requests.exceptions import HTTPError
 from config.constants import LEAGUES_DATA_DICT, SQL_EXPORTS_CONN, SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
-    OFFICIAL_LEAGUE, API_KEY, SOLOQ
+    OFFICIAL_LEAGUE, API_KEY, SOLOQ, REGIONS, SUPPORTED_LEAGUES
 
 
 class DataBase:
@@ -139,11 +137,24 @@ class DataBase:
             raise TypeError('Dict expected at data param. Should be passed as shown here: {"match": match_dict, '
                             '"timeline": timeline_dict}.')
 
+    def get_supported_leagues(self):
+        query = 'SELECT DISTINCT league_abbv FROM soloq'
+        cursor = self.sql_leagues_conn.cursor()
+        cursor.execute(query)
+        return [abbv[0] for abbv in cursor]
+
+    def get_supported_teams(self):
+        query = 'SELECT DISTINCT team_abbv FROM soloq'
+        cursor = self.sql_leagues_conn.cursor()
+        cursor.execute(query)
+        return [abbv[0] for abbv in cursor]
+
 
 def parse_args(args):
+    region = REGIONS[args.region.upper()]
     league = args.league.upper()
-    region = args.region.upper()
     db = DataBase(region, league)
+
     if args.download:
         if league == 'SOLOQ':
             if args.n_games:
@@ -162,3 +173,10 @@ def parse_args(args):
             print("Games downloaded.")
         else:
             pass
+
+    if args.export:
+        if league == 'SOLOQ':
+
+        else:
+            pass
+
