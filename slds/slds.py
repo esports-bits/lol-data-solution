@@ -42,6 +42,8 @@ def parse_args():
                                                              'his abbreviation.')
     parser_databases.add_argument('-tn', '--team_name', help='Work with the data of one or more teams selected through '
                                                              'his name.')
+    parser_databases.add_argument('-sd', '--start_date', help='Set the start date limit of the export (yyyy-mm-dd).')
+    parser_databases.add_argument('-ed', '--end_date', help='Set the end date limit of the export (yyyy-mm-dd).')
 
     return parser.parse_args()
 
