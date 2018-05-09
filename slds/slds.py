@@ -5,45 +5,42 @@ from config.constants import SUPPORTED_LEAGUES, SUPPORTED_CONNECTORS, REGIONS
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='LoL solution to generate datasets from leagues, scrims and solo Q LoL'
+    parser = argparse.ArgumentParser(description='LoL solution to generate datasets from leagues, scrims and Solo Q'
                                                  ' matches.')
-    parser.add_argument('-l', '--league', help='Choose league. {}'.format(SUPPORTED_LEAGUES))
-    parser.add_argument('-r', '--region', help='Choose region. {}'.format(REGIONS.keys()))
-    subparsers = parser.add_subparsers(dest='connector')
+    # Groups
+    mandatory = parser.add_argument_group('Mandatory', 'Mandatory commands to run the program.')
+    shared = parser.add_argument_group('Common', 'Shared commands for all systems.')
+    filesystem = parser.add_argument_group('File system', 'Commands used for the file system.')
+    databases = parser.add_argument_group('Databases', 'Commands used for the databases system.')
 
-    # Subparsers
-    parser_filesystem = subparsers.add_parser('fs', help='File system related commands.')
-    parser_databases = subparsers.add_parser('db', help='Data bases system related commands.')
+    # Mandatory commands
+    mandatory.add_argument('-l', '--league', help='Choose league. {}'.format(SUPPORTED_LEAGUES))
+    mandatory.add_argument('-r', '--region', help='Choose region. {}'.format(REGIONS.keys()))
+    mandatory.add_argument('-c', '--connector', help='Choose between Databases (DB) or File System (FS) connectors. {}')
 
-    # FS commands parser
-    parser_filesystem.add_argument('-e', '--export', help='Export dataset.', action='store_true')
-    parser_filesystem.add_argument('-d', '--download', help='Download new data if available.', action='store_true')
-    parser_filesystem.add_argument('-usd', '--update_static_data', help='Update static data information.',
+    # Shared commands
+    shared.add_argument('-e', '--export', help='Export data.', action='store_true')
+    shared.add_argument('-d', '--download', help='Download new data if available.', action='store_true')
+    shared.add_argument('-usd', '--update_static_data', help='Update static data information.', action='store_true')
+    shared.add_argument('-ng', '--n_games', help='Set the number of games to download from Solo Q.', type=int)
+    shared.add_argument('-bi', '--begin_index', help='Set the begin index of the Solo Q downloads.', type=int)
+
+    # FS commands
+    filesystem.add_argument('-xlsx', help='Export data as XLSX.', action='store_true')
+    filesystem.add_argument('-csv', help='Export data as CSV.', action='store_true')
+    filesystem.add_argument('-fu', '--force_update', help='Force the update of the exports datasets.',
                                    action='store_true')
-    parser_filesystem.add_argument('-ng', '--n_games', help='Set the number of games to download from Solo Q.',
-                                   type=int)
-    parser_filesystem.add_argument('-bi', '--begin_index', help='Set the begin index of the Solo Q downloads.',
-                                   type=int)
-    parser_filesystem.add_argument('-xlsx', help='Export dataset as XLSX.', action='store_true')
-    parser_filesystem.add_argument('-csv', help='Export dataset as CSV.', action='store_true')
-    parser_filesystem.add_argument('-fu', '--force_update', help='Force the update of the exports datasets.',
-                                   action='store_true')
-    parser_filesystem.add_argument('-ms', '--merge_soloq', help='Merge SoloQ dataset with info of players.',
+    filesystem.add_argument('-ms', '--merge_soloq', help='Merge SoloQ data with info of players.',
                                    action='store_true')
 
-    # DB commands parser
-    parser_databases.add_argument('-d', '--download', help='Download new data if available.', action='store_true')
-    parser_databases.add_argument('-e', '--export', help='Export dataset.', action='store_true')
-    parser_databases.add_argument('-usd', '--update_static_data', help='Update static data information.',
-                                  action='store_true')
-    parser_databases.add_argument('-ng', '--n_games', help='Set the number of games to download from Solo Q.', type=int)
-    parser_databases.add_argument('-bi', '--begin_index', help='Set the begin index of the Solo Q downloads.', type=int)
-    parser_databases.add_argument('-ta', '--team_abbv', help='Work with the data of one or more teams selected through '
-                                                             'his abbreviation.')
-    parser_databases.add_argument('-tn', '--team_name', help='Work with the data of one or more teams selected through '
-                                                             'his name.')
-    parser_databases.add_argument('-sd', '--start_date', help='Set the start date limit of the export (yyyy-mm-dd).')
-    parser_databases.add_argument('-ed', '--end_date', help='Set the end date limit of the export (yyyy-mm-dd).')
+    # DB commands
+    databases.add_argument('-ta', '--team_abbv', help='Work with the data of one or more teams selected through '
+                                                      'his abbreviation.')
+    databases.add_argument('-tn', '--team_name', help='Work with the data of one or more teams selected through '
+                                                      'his name.')
+    databases.add_argument('-sd', '--start_date', help='Set the start date limit of the export (yyyy-mm-dd).')
+    databases.add_argument('-ed', '--end_date', help='Set the end date limit of the export (yyyy-mm-dd).')
+    databases.add_argument('-p', '--patch', help='Select the patch.')
 
     return parser.parse_args()
 
