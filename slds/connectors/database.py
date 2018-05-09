@@ -176,7 +176,7 @@ def parse_args(args):
 
     if args.export:
         if league == 'SOLOQ':
-
+            pass
         else:
             pass
 
