@@ -1,13 +1,18 @@
+import os
 import urllib.request
 import json
 import pymysql.cursors
+import pandas as pd
 from pymongo import MongoClient
 from itertools import chain
 from riotwatcher import RiotWatcher
 from tqdm import tqdm
 from requests.exceptions import HTTPError
-from config.constants import LEAGUES_DATA_DICT, SQL_EXPORTS_CONN, SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
-    OFFICIAL_LEAGUE, API_KEY, SOLOQ, REGIONS, SUPPORTED_LEAGUES
+from converters.data2frames import game_to_dataframe as g2df
+from sqlalchemy import create_engine
+from config.constants import LEAGUES_DATA_DICT, SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
+    OFFICIAL_LEAGUE, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, \
+    TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXCEL_EXPORT_PATH_MERGED, EXPORTS_DIR
 
 
 class DataBase:
@@ -15,43 +20,18 @@ class DataBase:
         self.rw = RiotWatcher(API_KEY)
         self.region = region
         self.league = league
-        self.mongo_conn = MongoClient(MONGODB_CREDENTIALS)
-        self.mongo_db = self.mongo_conn.slds
-        self.sql_exports_conn = pymysql.connect(**SQL_EXPORTS_CONN)
-        self.sql_leagues_conn = pymysql.connect(**SQL_LEAGUES_CONN)
+        self.mongo_cnx = MongoClient(MONGODB_CREDENTIALS)
+        self.mongo_soloq_m_col = self.mongo_cnx.slds.soloq_m
+        self.mongo_soloq_tl_col = self.mongo_cnx.slds.soloq_tl
+        self.sql_leagues_cnx = pymysql.connect(**SQL_LEAGUES_CONN)
 
-    def get_league_game_ids(self, **kwargs):
+    def get_recent_game_ids(self, **kwargs):
         if self.league == 'SOLOQ':
-            # Current game ids in DB
-            soloq_m_coll = self.mongo_db.soloq_m
-            cursor = soloq_m_coll.find({'platformId': self.region.upper()}, {'_id': 0, 'gameId': 1})
+            cursor = self.mongo_soloq_m_col.find({'platformId': self.region.upper()}, {'_id': 0, 'gameId': 1})
             current_game_ids = [gid['gameId'] for gid in cursor]
-            # Players account ids in DB
-            if 'team_abbv' in kwargs:
-                print('Selecting games from {}.'.format(kwargs['team_abbv']))
-                abbvs = kwargs['team_abbv'].split(',')
-                if len(abbvs) == 1:
-                    query = 'SELECT DISTINCT account_id FROM soloq WHERE team_abbv = {}'.format('\"' + abbvs[0] + '\"')
-                elif len(abbvs) > 1:
-                    query = 'SELECT DISTINCT account_id FROM soloq WHERE team_abbv IN {}'.format(tuple(abbvs))
-                else:
-                    print('No abbreviations selected. Check help for more information.')
-                    return
-            elif 'team_name' in kwargs:
-                print('Selecting games from {}.'.format(kwargs['team_name']))
-                names = kwargs['team_name'].split(',')
-                if len(names) == 1:
-                    query = 'SELECT DISTINCT account_id FROM soloq WHERE team_name = {}'.format('\"' + names[0] + '\"')
-                elif len(names) > 1:
-                    query = 'SELECT DISTINCT account_id FROM soloq WHERE team_name IN {}'.format(tuple(names))
-                else:
-                    print('No names selected. Check help for more information.')
-                    return
-            else:
-                query = 'SELECT DISTINCT account_id FROM soloq'
-            cursor = self.sql_leagues_conn.cursor()
-            cursor.execute(query)
-            acc_ids = [gid[0] for gid in cursor]
+
+            acc_ids = self.get_account_ids(**kwargs)
+
             # New Solo Q game ids
             if 'n_games' in kwargs:
                 n_games = kwargs['n_games']
@@ -64,27 +44,45 @@ class DataBase:
             new_game_ids = self.get_soloq_game_ids(acc_ids=acc_ids, n_games=n_games, begin_index=begin_index)
             return current_game_ids, new_game_ids
 
+    def get_account_ids(self, **kwargs):
+        if 'team_abbv' in kwargs:
+            print('Looking for account ids of {} players.'.format(kwargs['team_abbv']))
+            abbvs = kwargs['team_abbv'].split(',')
+            if len(abbvs) == 1:
+                query = 'SELECT DISTINCT account_id FROM soloq WHERE team_abbv = {}'.format('\"' + abbvs[0] + '\"')
+            elif len(abbvs) > 1:
+                query = 'SELECT DISTINCT account_id FROM soloq WHERE team_abbv IN {}'.format(tuple(abbvs))
+            else:
+                print('No abbreviations selected. Check help for more information.')
+                return
+        elif 'competition' in kwargs:
+            print('Looking for account ids players competing in the {}.'.format(kwargs['competition']))
+            competitions = kwargs['competition'].split(',')
+            if len(competitions) == 1:
+                query = 'SELECT DISTINCT account_id FROM soloq WHERE competition_abbv = {}' \
+                    .format('\"' + competitions[0] + '\"')
+            elif len(competitions) > 1:
+                query = 'SELECT DISTINCT account_id FROM soloq WHERE competition_abbv IN {}' \
+                    .format(tuple(competitions))
+            else:
+                print('No names selected. Check help for more information.')
+                return
+        else:
+            print('Looking for account ids of every player in the DB.')
+            query = 'SELECT DISTINCT account_id FROM soloq'
+        cursor = self.sql_leagues_cnx.cursor()
+        cursor.execute(query)
+        return [gid[0] for gid in cursor]
 
     @staticmethod
     def get_new_ids(old, new):
         return list(set(map(int, new)) - set(map(int, old)))
 
-    def get_new_game_ids(self):
-        league = self.league
-        if league == ' SOLOQ':
-            soloq_m_coll = self.mongo_db.soloq_m
-            cursor = soloq_m_coll.find({}, {'_id': 0, 'gameId': 1})
-            old = [gid['gameId'] for gid in cursor]
-        else:
-            return
-
     def download_games(self, current_game_ids, new_game_ids):
         def tournament_match_to_dict(id1, hash1, tournament):
-            with urllib.request.urlopen('https://acs.leagueoflegends.com/v1/stats/game/{tr}/{id}'
-                                        '?gameHash={hash}'.format(tr=tournament, id=id1, hash=hash1)) as url:
+            with urllib.request.urlopen(TOURNAMENT_GAME_ENDPOINT.format(tr=tournament, id=id1, hash=hash1)) as url:
                 match = json.loads(url.read().decode())
-            with urllib.request.urlopen('https://acs.leagueoflegends.com/v1/stats/game/{tr}/{id}/timeline'
-                                        '?gameHash={hash}'.format(tr=tournament, id=id1, hash=hash1)) as url:
+            with urllib.request.urlopen(TOURNAMENT_GAME_ENDPOINT.format(tr=tournament, id=id1, hash=hash1)) as url:
                 tl = json.loads(url.read().decode())
             return match, tl
         ids_not_in_db = self.get_new_ids(current_game_ids, new_game_ids)
@@ -129,54 +127,122 @@ class DataBase:
             data['timeline']['gameId'] = game_id
             data['timeline']['platformId'] = platform_id
             if self.league == SOLOQ:
-                soloq_m_coll = self.mongo_db.soloq_m
-                soloq_tl_coll = self.mongo_db.soloq_tl
-                soloq_m_coll.insert_one(data['match'])
-                soloq_tl_coll.insert_one(data['timeline'])
+                self.mongo_soloq_m_col.insert_one(data['match'])
+                self.mongo_soloq_tl_col.insert_one(data['timeline'])
         else:
             raise TypeError('Dict expected at data param. Should be passed as shown here: {"match": match_dict, '
                             '"timeline": timeline_dict}.')
 
     def get_supported_leagues(self):
         query = 'SELECT DISTINCT league_abbv FROM soloq'
-        cursor = self.sql_leagues_conn.cursor()
+        cursor = self.sql_leagues_cnx.cursor()
         cursor.execute(query)
         return [abbv[0] for abbv in cursor]
 
     def get_supported_teams(self):
         query = 'SELECT DISTINCT team_abbv FROM soloq'
-        cursor = self.sql_leagues_conn.cursor()
+        cursor = self.sql_leagues_cnx.cursor()
         cursor.execute(query)
         return [abbv[0] for abbv in cursor]
 
+    def concat_games(self, df):
+        if self.league == 'SLO':
+            return pd.concat([g2df(match=None,
+                                   timeline=None,
+                                   custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS].T),
+                                   custom_positions=STANDARD_POSITIONS,
+                                   team_names=list(g[1][['blue', 'red']]),
+                                   week=g[1]['week'], custom=True) for g in df.iterrows()])
+        elif self.league == 'SCRIMS':
+            return pd.concat([g2df(match=None,
+                                   timeline=None,
+                                   custom_positions=list(g[1][SCRIMS_POSITIONS_COLS]),
+                                   team_names=list(g[1][['blue', 'red']]),
+                                   custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
+                                   custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n'], blue_win=g[1]['blue_win']
+                                   ) for g in df.iterrows()])
+        elif self.league == 'LCK':
+            return pd.concat([g2df(match=None,
+                                   timeline=None,
+                                   week=g[1]['week'], custom=False,
+                                   custom_positions=STANDARD_POSITIONS) for g in df.iterrows()])
+        elif self.league == 'SOLOQ':
+            return pd.concat([g2df(match=self.mongo_soloq_m_col.find_one({'platformId': self.region,
+                                                                          'gameId': gid}, {'_id': 0}),
+                                   timeline=self.mongo_soloq_tl_col.find_one({'platformId': self.region,
+                                                                              'gameId': str(gid)}, {'_id': 0}),
+                                   custom=False
+                                   ) for gid in list(df.game_id)])
+
+    def get_stored_game_ids(self, **kwargs):
+        acc_ids = self.get_account_ids(**kwargs)
+        games = self.mongo_soloq_m_col.find({'participantIdentities.player.accountId': {'$in': acc_ids}},
+                                            {'_id': 0, 'gameId': 1})
+        return [obj['gameId'] for obj in games]
+
+    def close_conections(self):
+        self.mongo_cnx.close()
+        self.sql_leagues_cnx.close()
+
+
+def create_dirs():
+    if not os.path.exists(EXPORTS_DIR):
+        os.makedirs(EXPORTS_DIR)
+
 
 def parse_args(args):
+    create_dirs()
     region = REGIONS[args.region.upper()]
     league = args.league.upper()
     db = DataBase(region, league)
+    try:
+        if args.download:
+            if league == 'SOLOQ':
+                if args.n_games:
+                    n_games = args.n_games
+                else:
+                    n_games = 20
 
-    if args.download:
-        if league == 'SOLOQ':
-            if args.n_games:
-                n_games = args.n_games
+                if args.team_abbv:
+                    team_abbv = args.team_abbv
+                    current_game_ids, new_game_ids = db.get_recent_game_ids(n_games=n_games, team_abbv=team_abbv)
+                elif args.competition:
+                    competition = args.competition
+                    current_game_ids, new_game_ids = db.get_recent_game_ids(n_games=n_games, competition=competition)
+                else:
+                    current_game_ids, new_game_ids = db.get_recent_game_ids(n_games=n_games)
+                db.download_games(current_game_ids=current_game_ids, new_game_ids=new_game_ids)
+                print("Games downloaded.")
             else:
-                n_games = 20
-            if args.team_abbv:
-                team_abbv = args.team_abbv
-                current_game_ids, new_game_ids = db.get_league_game_ids(n_games=n_games, team_abbv=team_abbv)
-            elif args.team_name:
-                team_name = args.team_name
-                current_game_ids, new_game_ids = db.get_league_game_ids(n_games=n_games, team_name=team_name)
+                pass
+
+        if args.export:
+            if league == 'SOLOQ':
+                if args.team_abbv:
+                    team_abbv = args.team_abbv
+                    stored_game_ids = db.get_stored_game_ids(team_abbv=team_abbv)
+                elif args.competition:
+                    competition = args.competition
+                    stored_game_ids = db.get_stored_game_ids(competition=competition)
+                else:
+                    stored_game_ids = db.get_recent_game_ids()
+                df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id'})
+                concatenated_df = db.concat_games(df)
+                final_df = concatenated_df
+
+                # Merge Solo Q players info with data
+                if args.merge_soloq:
+                    engine = create_engine(SQL_LEAGUES_ENGINE)
+                    cnx = engine.connect()
+                    player_info_df = pd.read_sql_table(con=cnx, table_name='soloq')
+                    merged_df = concatenated_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
+                                                      how='left')
+                    final_df = merged_df
+                    cnx.close()
+
+                final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH_MERGED])
+                print("Games exported.")
             else:
-                current_game_ids, new_game_ids = db.get_league_game_ids(n_games=n_games)
-            db.download_games(current_game_ids=current_game_ids, new_game_ids=new_game_ids)
-            print("Games downloaded.")
-        else:
-            pass
-
-    if args.export:
-        if league == 'SOLOQ':
-            pass
-        else:
-            pass
-
+                pass
+    finally:
+        db.close_conections()

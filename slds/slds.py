@@ -35,12 +35,14 @@ def parse_args():
 
     # DB commands
     databases.add_argument('-ta', '--team_abbv', help='Work with the data of one or more teams selected through '
-                                                      'his abbreviation.')
+                                                      'his abbreviation. {download and export}')
     databases.add_argument('-tn', '--team_name', help='Work with the data of one or more teams selected through '
-                                                      'his name.')
-    databases.add_argument('-sd', '--start_date', help='Set the start date limit of the export (yyyy-mm-dd).')
+                                                      'his name. {download and export}')
+    databases.add_argument('-sd', '--start_date', help='Set the start date limit of the export (yyyy-mm-dd). '
+                                                       '{download and export}')
     databases.add_argument('-ed', '--end_date', help='Set the end date limit of the export (yyyy-mm-dd).')
-    databases.add_argument('-p', '--patch', help='Select the patch.')
+    databases.add_argument('-p', '--patch', help='Select the patch. {download and export}')
+    databases.add_argument('-C', '--competition', help='Select the competition. {download and export}')
 
     return parser.parse_args()
 
@@ -72,7 +74,7 @@ def main():
     if not args.connector:
         print('No connector selected. To select a connector write down one of the following names just after the '
               'script call with region and league parameters set: {}. Something like that: \"python program.py '
-              '-r EUW -l SOLOQ {}\"'.format(SUPPORTED_CONNECTORS, SUPPORTED_CONNECTORS[0]))
+              '-r EUW -l SOLOQ -c {}\"'.format(SUPPORTED_CONNECTORS, SUPPORTED_CONNECTORS[0]))
         return
     elif args.connector.upper() == 'FS':
         filesystem.parse_args(args)
