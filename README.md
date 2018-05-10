@@ -10,12 +10,6 @@ It will let you download the dataset of the desired context filtering the data b
 * Superliga Orange
 * Scrims
 * Solo queue
-## [COMING SOON] Drafts
-Ability to start sessions and make several drafts that are going to be related for the same session ID which is the name of the team and the datetime it was created.
-* Theory drafting
-* Store past drafts
-* Draft stats
-* ML suggestions based on players solo queue, both in ally and enemy team.
 
 # Installation
 # Usage
