@@ -1,5 +1,4 @@
 import numpy as np
-from pandas import read_csv
 
 API_KEY = ""
 
@@ -114,7 +113,6 @@ CONNECTORS_DATA_DICT = {
     FS: {},
     DB: {}
 }
-
 SUPPORTED_LEAGUES = list(LEAGUES_DATA_DICT.keys())
 SUPPORTED_CONNECTORS = list(CONNECTORS_DATA_DICT.keys())
 
@@ -122,6 +120,7 @@ EXPORTS_DB_NAME = 'exports'
 LEAGUES_DB_NAME = 'leagues_info'
 SQL_EXPORTS_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': EXPORTS_DB_NAME}
 SQL_LEAGUES_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': LEAGUES_DB_NAME}
+SQL_LEAGUES_ENGINE = 'mysql+pymysql://{name}:{psswd}@localhost/{db}'.format(name='', psswd='', db=LEAGUES_DB_NAME)
 MONGODB_CREDENTIALS = 'mongodb://localhost:27017/'
 
 REGIONS = {
@@ -140,3 +139,5 @@ REGIONS = {
 }
 
 DEFAULT_REGION = REGIONS['EUW']
+
+TOURNAMENT_GAME_ENDPOINT = 'https://acs.leagueoflegends.com/v1/stats/game/{tr}/{id}?gameHash={hash}'
