@@ -12,7 +12,7 @@ from converters.data2frames import game_to_dataframe as g2df
 from sqlalchemy import create_engine
 from config.constants import LEAGUES_DATA_DICT, SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
     OFFICIAL_LEAGUE, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, \
-    TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXCEL_EXPORT_PATH_MERGED, EXPORTS_DIR
+    TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXCEL_EXPORT_PATH_MERGED, EXPORTS_DIR, EXCEL_EXPORT_PATH
 
 
 class DataBase:
@@ -168,7 +168,7 @@ class DataBase:
                                    custom_positions=STANDARD_POSITIONS) for g in df.iterrows()])
         elif self.league == 'SOLOQ':
             return pd.concat([g2df(match=self.mongo_soloq_m_col.find_one({'platformId': self.region,
-                                                                          'gameId': gid}, {'_id': 0}),
+                                                                          'gameId': int(gid)}, {'_id': 0}),
                                    timeline=self.mongo_soloq_tl_col.find_one({'platformId': self.region,
                                                                               'gameId': str(gid)}, {'_id': 0}),
                                    custom=False
@@ -235,12 +235,14 @@ def parse_args(args):
                     engine = create_engine(SQL_LEAGUES_ENGINE)
                     cnx = engine.connect()
                     player_info_df = pd.read_sql_table(con=cnx, table_name='soloq')
-                    merged_df = concatenated_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
-                                                      how='left')
-                    final_df = merged_df
+                    final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
+                                              how='left')
                     cnx.close()
 
-                final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH_MERGED])
+                    final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH_MERGED])
+                    print("Games exported.")
+                    return
+                final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH])
                 print("Games exported.")
             else:
                 pass
