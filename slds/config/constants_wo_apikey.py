@@ -1,4 +1,5 @@
 import numpy as np
+import re
 
 API_KEY = ""
 
@@ -141,3 +142,5 @@ REGIONS = {
 DEFAULT_REGION = REGIONS['EUW']
 
 TOURNAMENT_GAME_ENDPOINT = 'https://acs.leagueoflegends.com/v1/stats/game/{tr}/{id}?gameHash={hash}'
+
+PATCH_PATTERN = re.compile(r'^[0-9]{1,2}\.[0-9]{1,2}(\.[0-9]*){0,2}$')
