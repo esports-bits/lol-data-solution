@@ -1,7 +1,7 @@
-import os
 import argparse
+import re
 from connectors import filesystem, database
-from config.constants import SUPPORTED_LEAGUES, SUPPORTED_CONNECTORS, REGIONS
+from config.constants import SUPPORTED_LEAGUES, SUPPORTED_CONNECTORS, REGIONS, PATCH_PATTERN
 
 
 def parse_args():
@@ -24,24 +24,22 @@ def parse_args():
     shared.add_argument('-usd', '--update_static_data', help='Update static data information.', action='store_true')
     shared.add_argument('-ng', '--n_games', help='Set the number of games to download from Solo Q.', type=int)
     shared.add_argument('-bi', '--begin_index', help='Set the begin index of the Solo Q downloads.', type=int)
+    shared.add_argument('-ms', '--merge_soloq', help='Merge SoloQ data with info of players.', action='store_true')
 
     # FS commands
     filesystem.add_argument('-xlsx', help='Export data as XLSX.', action='store_true')
     filesystem.add_argument('-csv', help='Export data as CSV.', action='store_true')
     filesystem.add_argument('-fu', '--force_update', help='Force the update of the exports datasets.',
                                    action='store_true')
-    filesystem.add_argument('-ms', '--merge_soloq', help='Merge SoloQ data with info of players.',
-                                   action='store_true')
 
     # DB commands
     databases.add_argument('-ta', '--team_abbv', help='Work with the data of one or more teams selected through '
                                                       'his abbreviation. {download and export}')
-    databases.add_argument('-tn', '--team_name', help='Work with the data of one or more teams selected through '
-                                                      'his name. {download and export}')
     databases.add_argument('-sd', '--start_date', help='Set the start date limit of the export (yyyy-mm-dd). '
                                                        '{download and export}')
-    databases.add_argument('-ed', '--end_date', help='Set the end date limit of the export (yyyy-mm-dd).')
-    databases.add_argument('-p', '--patch', help='Select the patch. {download and export}')
+    databases.add_argument('-ed', '--end_date', help='Set the end date limit of the export (yyyy-mm-dd). '
+                                                     '{download and export}')
+    databases.add_argument('-p', '--patch', help='Select the patch. {export}')
     databases.add_argument('-C', '--competition', help='Select the competition. {download and export}')
 
     return parser.parse_args()
@@ -70,6 +68,12 @@ def main():
     elif args.league.upper() not in SUPPORTED_LEAGUES:
         print('League {} not supported. Please, use -l or --league and select a league to work on from the following '
               'list: {}'.format(args.league.upper(), SUPPORTED_LEAGUES))
+
+    if args.patch:
+        if not PATCH_PATTERN.match(args.patch):
+            print('Patch format is incorrect. Should be something like this:  \'8.9.1\', \'8.9\', \'8\' '
+                  '(withouth the \' symbols).')
+            return
 
     if not args.connector:
         print('No connector selected. To select a connector write down one of the following names just after the '

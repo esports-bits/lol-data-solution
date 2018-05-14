@@ -31,13 +31,14 @@ class DataBase:
             current_game_ids = [gid['gameId'] for gid in cursor]
 
             acc_ids = self.get_account_ids(**kwargs)
+            print('{} account ids found.'.format(acc_ids))
 
             # New Solo Q game ids
-            if 'n_games' in kwargs:
+            if kwargs['n_games'] is not None:
                 n_games = kwargs['n_games']
             else:
                 n_games = 20
-            if 'begin_index' in kwargs:
+            if kwargs['begin_index'] is not None:
                 begin_index = kwargs['begin_index']
             else:
                 begin_index = 0
@@ -46,7 +47,7 @@ class DataBase:
 
     def get_account_ids(self, **kwargs):
         if 'team_abbv' in kwargs:
-            print('Looking for account ids of {} players.'.format(kwargs['team_abbv']))
+            print('\tLooking for account ids of {} players.'.format(kwargs['team_abbv'].replace(',', ' and ')))
             abbvs = kwargs['team_abbv'].split(',')
             if len(abbvs) == 1:
                 query = 'SELECT DISTINCT account_id FROM soloq WHERE team_abbv = {}'.format('\"' + abbvs[0] + '\"')
@@ -56,7 +57,7 @@ class DataBase:
                 print('No abbreviations selected. Check help for more information.')
                 return
         elif 'competition' in kwargs:
-            print('Looking for account ids players competing in the {}.'.format(kwargs['competition']))
+            print('\tLooking for account ids players competing in the {}.'.format(kwargs['competition']))
             competitions = kwargs['competition'].split(',')
             if len(competitions) == 1:
                 query = 'SELECT DISTINCT account_id FROM soloq WHERE competition_abbv = {}' \
@@ -65,10 +66,10 @@ class DataBase:
                 query = 'SELECT DISTINCT account_id FROM soloq WHERE competition_abbv IN {}' \
                     .format(tuple(competitions))
             else:
-                print('No names selected. Check help for more information.')
+                print('\tNo names selected. Check help for more information.')
                 return
         else:
-            print('Looking for account ids of every player in the DB.')
+            print('\tLooking for account ids of every player in the DB.')
             query = 'SELECT DISTINCT account_id FROM soloq'
         cursor = self.sql_leagues_cnx.cursor()
         cursor.execute(query)
@@ -87,7 +88,7 @@ class DataBase:
             return match, tl
         ids_not_in_db = self.get_new_ids(current_game_ids, new_game_ids)
         if ids_not_in_db:
-            for item in tqdm(ids_not_in_db, desc='Downloading games'):
+            for item in tqdm(ids_not_in_db, desc='\tDownloading games'):
                 try:
                     if LEAGUES_DATA_DICT[self.league][OFFICIAL_LEAGUE]:
                         pass
@@ -99,7 +100,7 @@ class DataBase:
                 except HTTPError:
                     pass
         else:
-            print('All games already downloaded.')
+            print('\tAll games already downloaded.')
         return None
 
     def get_soloq_game_ids(self, acc_ids, **kwargs):
@@ -175,10 +176,25 @@ class DataBase:
                                    ) for gid in list(df.game_id)])
 
     def get_stored_game_ids(self, **kwargs):
-        acc_ids = self.get_account_ids(**kwargs)
-        games = self.mongo_soloq_m_col.find({'participantIdentities.player.accountId': {'$in': acc_ids}},
-                                            {'_id': 0, 'gameId': 1})
-        return [obj['gameId'] for obj in games]
+        if kwargs['team_abbv'] is not None or kwargs['competition'] is not None and kwargs['patch'] is not None:
+            patch = kwargs['patch']
+            print('\tLooking for games played on patch {}.'.format(patch))
+            regex_patch = '^' + '{}'.format(patch).replace('.', r'\.')
+            acc_ids = self.get_account_ids(**kwargs)
+            games = self.mongo_soloq_m_col.find({'participantIdentities.player.accountId': {'$in': acc_ids},
+                                                 'gameVersion': {'$regex': regex_patch}},
+                                                {'_id': 0, 'gameId': 1})
+        elif kwargs['team_abbv'] is not None or kwargs['competition'] is not None and kwargs['patch'] is None:
+            acc_ids = self.get_account_ids(**kwargs)
+            games = self.mongo_soloq_m_col.find({'participantIdentities.player.accountId': {'$in': acc_ids}},
+                                                {'_id': 0, 'gameId': 1})
+        elif kwargs['patch'] is not None:
+            patch = kwargs['patch']
+            print('\tLooking for games played on patch {}.'.format(patch))
+            regex_patch = '^' + '{}'.format(patch).replace('.', r'\.')
+            games = self.mongo_soloq_m_col.find({'gameVersion': {'$regex': regex_patch}}, {'_id': 0, 'gameId': 1})
+
+        return [g['gameId'] for g in games]
 
     def close_conections(self):
         self.mongo_cnx.close()
@@ -192,40 +208,25 @@ def create_dirs():
 
 def parse_args(args):
     create_dirs()
+    kwargs = vars(args)
     region = REGIONS[args.region.upper()]
     league = args.league.upper()
     db = DataBase(region, league)
     try:
         if args.download:
+            print('Downloading.')
             if league == 'SOLOQ':
-                if args.n_games:
-                    n_games = args.n_games
-                else:
-                    n_games = 20
-
-                if args.team_abbv:
-                    team_abbv = args.team_abbv
-                    current_game_ids, new_game_ids = db.get_recent_game_ids(n_games=n_games, team_abbv=team_abbv)
-                elif args.competition:
-                    competition = args.competition
-                    current_game_ids, new_game_ids = db.get_recent_game_ids(n_games=n_games, competition=competition)
-                else:
-                    current_game_ids, new_game_ids = db.get_recent_game_ids(n_games=n_games)
+                current_game_ids, new_game_ids = db.get_recent_game_ids(**kwargs)
                 db.download_games(current_game_ids=current_game_ids, new_game_ids=new_game_ids)
-                print("Games downloaded.")
+                print("\tGames downloaded.")
             else:
                 pass
 
         if args.export:
+            print('Exporting.')
             if league == 'SOLOQ':
-                if args.team_abbv:
-                    team_abbv = args.team_abbv
-                    stored_game_ids = db.get_stored_game_ids(team_abbv=team_abbv)
-                elif args.competition:
-                    competition = args.competition
-                    stored_game_ids = db.get_stored_game_ids(competition=competition)
-                else:
-                    stored_game_ids = db.get_recent_game_ids()
+                stored_game_ids = db.get_stored_game_ids(**kwargs)
+                print('\t{} games found.'.format(len(stored_game_ids)))
                 df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id'})
                 concatenated_df = db.concat_games(df)
                 final_df = concatenated_df
@@ -240,10 +241,10 @@ def parse_args(args):
                     cnx.close()
 
                     final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH_MERGED])
-                    print("Games exported.")
+                    print("\tGames exported.")
                     return
                 final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH])
-                print("Games exported.")
+                print("\tGames exported.")
             else:
                 pass
     finally:
