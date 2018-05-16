@@ -1,5 +1,4 @@
 import argparse
-import re
 from connectors import filesystem, database
 from config.constants import SUPPORTED_LEAGUES, SUPPORTED_CONNECTORS, REGIONS, PATCH_PATTERN
 
@@ -35,9 +34,9 @@ def parse_args():
     # DB commands
     databases.add_argument('-ta', '--team_abbv', help='Work with the data of one or more teams selected through '
                                                       'his abbreviation. {download and export}')
-    databases.add_argument('-sd', '--start_date', help='Set the start date limit of the export (yyyy-mm-dd). '
+    databases.add_argument('-bt', '--begin_time', help='Set the start date limit of the export (day-month-year). '
                                                        '{download and export}')
-    databases.add_argument('-ed', '--end_date', help='Set the end date limit of the export (yyyy-mm-dd). '
+    databases.add_argument('-et', '--end_time', help='Set the end date limit of the export (day-month-year). '
                                                      '{download and export}')
     databases.add_argument('-p', '--patch', help='Select the patch. {export}')
     databases.add_argument('-C', '--competition', help='Select the competition. {download and export}')
