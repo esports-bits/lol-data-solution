@@ -10,6 +10,7 @@ from tqdm import tqdm
 from requests.exceptions import HTTPError
 from converters.data2frames import game_to_dataframe as g2df
 from sqlalchemy import create_engine
+from datetime import datetime as dt, timedelta
 from config.constants import LEAGUES_DATA_DICT, SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
     OFFICIAL_LEAGUE, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, \
     TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXCEL_EXPORT_PATH_MERGED, EXPORTS_DIR, EXCEL_EXPORT_PATH
@@ -31,22 +32,14 @@ class DataBase:
             current_game_ids = [gid['gameId'] for gid in cursor]
 
             acc_ids = self.get_account_ids(**kwargs)
-            print('{} account ids found.'.format(acc_ids))
+            print('\t{} account ids found.'.format(len(acc_ids)))
 
             # New Solo Q game ids
-            if kwargs['n_games'] is not None:
-                n_games = kwargs['n_games']
-            else:
-                n_games = 20
-            if kwargs['begin_index'] is not None:
-                begin_index = kwargs['begin_index']
-            else:
-                begin_index = 0
-            new_game_ids = self.get_soloq_game_ids(acc_ids=acc_ids, n_games=n_games, begin_index=begin_index)
+            new_game_ids = self.get_soloq_game_ids(acc_ids=acc_ids, **kwargs)
             return current_game_ids, new_game_ids
 
     def get_account_ids(self, **kwargs):
-        if 'team_abbv' in kwargs:
+        if kwargs['team_abbv'] is not None:
             print('\tLooking for account ids of {} players.'.format(kwargs['team_abbv'].replace(',', ' and ')))
             abbvs = kwargs['team_abbv'].split(',')
             if len(abbvs) == 1:
@@ -56,7 +49,7 @@ class DataBase:
             else:
                 print('No abbreviations selected. Check help for more information.')
                 return
-        elif 'competition' in kwargs:
+        elif kwargs['competition'] is not None:
             print('\tLooking for account ids players competing in the {}.'.format(kwargs['competition']))
             competitions = kwargs['competition'].split(',')
             if len(competitions) == 1:
@@ -87,6 +80,7 @@ class DataBase:
                 tl = json.loads(url.read().decode())
             return match, tl
         ids_not_in_db = self.get_new_ids(current_game_ids, new_game_ids)
+        print('\t{} new games to be downloaded.'.format(len(ids_not_in_db)))
         if ids_not_in_db:
             for item in tqdm(ids_not_in_db, desc='\tDownloading games'):
                 try:
@@ -104,20 +98,18 @@ class DataBase:
         return None
 
     def get_soloq_game_ids(self, acc_ids, **kwargs):
-        if 'n_games' in kwargs:
-            n_games = kwargs['n_games']
-        else:
-            n_games = 20
+        matchlist_kwargs = {k: kwargs[k] for k in ['begin_index', 'n_games']}
+        matchlist_kwargs['queue'] = 420
+        matchlist_kwargs['region'] = self.region
+        if matchlist_kwargs['n_games'] is not None and matchlist_kwargs['begin_index'] is not None:
+            matchlist_kwargs['end_index'] = matchlist_kwargs['begin_index'] + matchlist_kwargs.pop('n_games')
+        elif matchlist_kwargs['n_games'] is not None and matchlist_kwargs['begin_index'] is None:
+            matchlist_kwargs['end_index'] = matchlist_kwargs.pop('n_games')
+        elif matchlist_kwargs['n_games'] is None:
+            matchlist_kwargs['end_index'] = matchlist_kwargs.pop('n_games')
 
-        if 'begin_index' in kwargs:
-            begin_index = kwargs['begin_index']
-        else:
-            begin_index = 0
         matches = list(chain.from_iterable(
-            [self.rw.match.matchlist_by_account(account_id=acc, begin_index=begin_index,
-                                                end_index=int(begin_index)+int(n_games),
-                                                region=self.region,
-                                                queue=420)['matches'] for acc in acc_ids]))
+            [self.rw.match.matchlist_by_account(account_id=acc, **matchlist_kwargs)['matches'] for acc in acc_ids]))
         result = list(set([m['gameId'] for m in matches]))
         return result
 
@@ -176,29 +168,45 @@ class DataBase:
                                    ) for gid in list(df.game_id)])
 
     def get_stored_game_ids(self, **kwargs):
-        if kwargs['team_abbv'] is not None or kwargs['competition'] is not None and kwargs['patch'] is not None:
+        query = {}
+        if kwargs['team_abbv'] is not None or kwargs['competition'] is not None:
+            acc_ids = self.get_account_ids(**kwargs)
+            query['participantIdentities.player.accountId'] = {'$in': acc_ids}
+        if kwargs['patch'] is not None:
             patch = kwargs['patch']
             print('\tLooking for games played on patch {}.'.format(patch))
             regex_patch = '^' + '{}'.format(patch).replace('.', r'\.')
-            acc_ids = self.get_account_ids(**kwargs)
-            games = self.mongo_soloq_m_col.find({'participantIdentities.player.accountId': {'$in': acc_ids},
-                                                 'gameVersion': {'$regex': regex_patch}},
-                                                {'_id': 0, 'gameId': 1})
-        elif kwargs['team_abbv'] is not None or kwargs['competition'] is not None and kwargs['patch'] is None:
-            acc_ids = self.get_account_ids(**kwargs)
-            games = self.mongo_soloq_m_col.find({'participantIdentities.player.accountId': {'$in': acc_ids}},
-                                                {'_id': 0, 'gameId': 1})
-        elif kwargs['patch'] is not None:
-            patch = kwargs['patch']
-            print('\tLooking for games played on patch {}.'.format(patch))
-            regex_patch = '^' + '{}'.format(patch).replace('.', r'\.')
-            games = self.mongo_soloq_m_col.find({'gameVersion': {'$regex': regex_patch}}, {'_id': 0, 'gameId': 1})
+            query['gameVersion'] = {'$regex': regex_patch}
+        if kwargs['begin_time'] is not None:
+            print('\tLooking for games past {} at 00:00:00.'.format(kwargs['begin_time']))
+            timestamp = self.__str_date_to_timestamp(kwargs['begin_time'])
+            query['gameCreation'] = {}
+            query['gameCreation']['$gte'] = timestamp
+        if kwargs['end_time'] is not None:
+            print('\tLooking for games before {} at 23:59:59.'.format(kwargs['end_time']))
+            td1 = timedelta(hours=23, minutes=59, seconds=59)
+            timestamp = self.__str_date_to_timestamp(kwargs['end_time'], td1)
+            try:
+                query['gameCreation']['$lte'] = timestamp
+            except KeyError:
+                query['gameCreation'] = {}
+                query['gameCreation']['$lte'] = timestamp
+
+        games = self.mongo_soloq_m_col.find(query, {'_id': 0, 'gameId': 1})
 
         return [g['gameId'] for g in games]
 
     def close_conections(self):
         self.mongo_cnx.close()
         self.sql_leagues_cnx.close()
+
+    @staticmethod
+    def __str_date_to_timestamp(date, time_delta=None):
+        if time_delta is not None:
+            dt1 = dt.strptime(date, '%d-%m-%Y') + time_delta
+        else:
+            dt1 = dt.strptime(date, '%d-%m-%Y')
+        return int(dt.timestamp(dt1) * 1e3)
 
 
 def create_dirs():
