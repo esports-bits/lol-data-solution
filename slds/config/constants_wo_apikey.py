@@ -123,6 +123,7 @@ SQL_EXPORTS_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database':
 SQL_LEAGUES_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': LEAGUES_DB_NAME}
 SQL_LEAGUES_ENGINE = 'mysql+pymysql://{name}:{psswd}@localhost/{db}'.format(name='', psswd='', db=LEAGUES_DB_NAME)
 MONGODB_CREDENTIALS = 'mongodb://localhost:27017/'
+MONGODB_ATLAS_CREDENTIALS = 'mongodb+srv://<USERNAME>:<PASSWORD>@cluster0-kbg0m.mongodb.net/test?retryWrites=true'
 
 REGIONS = {
     'BR': 'BR1',
