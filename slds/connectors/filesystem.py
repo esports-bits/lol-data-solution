@@ -12,7 +12,7 @@ from requests.exceptions import HTTPError
 from config.constants import RAW_DATA_PATH, EXCEL_EXPORT_PATH, CSV_EXPORT_PATH_MERGED, EXCEL_EXPORT_PATH_MERGED, \
     SCRIMS_POSITIONS_COLS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, API_KEY, STATIC_DATA_DIR, LEAGUES_DATA_DICT, \
     CSV_EXPORT_PATH, IDS_FILE_PATH, DTYPES, OFFICIAL_LEAGUE, EXPORTS_DIR, LEAGUES_DATA_DIR, MATCHES_RAW_DATA_DIR, \
-    SOLOQ_GAMES_DIR, LCK_GAMES_DIR, SCRIMS_GAMES_DIR, SLO_GAMES_DIR
+    SOLOQ_GAMES_DIR, LCK_GAMES_DIR, SCRIMS_GAMES_DIR, SLO_GAMES_DIR, REGIONS
 
 
 class FileSystem:
@@ -88,8 +88,8 @@ class FileSystem:
                         data = {'match': match, 'timeline': timeline}
                         self.__save_match_raw_data(data=data, save_dir=save_dir, hash=hash1)
                     else:
-                        match = self.rw.match.by_id(match_id=item, region=self.region)
-                        timeline = self.rw.match.timeline_by_match(match_id=item, region=self.region)
+                        match = self.rw.match.by_id(match_id=item, region=REGIONS[self.region])
+                        timeline = self.rw.match.timeline_by_match(match_id=item, region=REGIONS[self.region])
                         data = {'match': match, 'timeline': timeline}
                         self.__save_match_raw_data(data=data, save_dir=save_dir)
                 except HTTPError:
