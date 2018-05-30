@@ -171,7 +171,7 @@ class DataBase:
         query = {}
         if kwargs['team_abbv'] is not None or kwargs['competition'] is not None:
             acc_ids = self.get_account_ids(**kwargs)
-            query['participantIdentities.player.accountId'] = {'$in': acc_ids}
+            query['participantIdentities.player.currentAccountId'] = {'$in': acc_ids}
         if kwargs['patch'] is not None:
             patch = kwargs['patch']
             print('\tLooking for games played on patch {}.'.format(patch))
@@ -249,7 +249,7 @@ def parse_args(args):
                     cnx.close()
 
                     final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH_MERGED])
-                    print("\tGames exported.")
+                    print("\tGames merged and exported.")
                     return
                 final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH])
                 print("\tGames exported.")
