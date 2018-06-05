@@ -14,7 +14,7 @@ def parse_args():
 
     # Mandatory commands
     mandatory.add_argument('-l', '--league', help='Choose league. {}'.format(SUPPORTED_LEAGUES))
-    mandatory.add_argument('-r', '--region', help='Choose region. {}'.format(REGIONS.keys()))
+    mandatory.add_argument('-r', '--region', help='Choose region. {}'.format(list(REGIONS.keys())))
     mandatory.add_argument('-c', '--connector', help='Choose between Databases (DB) or File System (FS) connectors. {}')
 
     # Shared commands

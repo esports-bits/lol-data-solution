@@ -24,6 +24,8 @@ class DataBase:
         self.mongo_cnx = MongoClient(MONGODB_CREDENTIALS)
         self.mongo_soloq_m_col = self.mongo_cnx.slds.soloq_m
         self.mongo_soloq_tl_col = self.mongo_cnx.slds.soloq_tl
+        self.mongo_slo_m_col = self.mongo_cnx.slds.slo_m
+        self.mongo_slo_tl_col = self.mongo_cnx.slds.slo_tl
         self.sql_leagues_cnx = pymysql.connect(**SQL_LEAGUES_CONN)
 
     def get_recent_game_ids(self, **kwargs):
@@ -142,10 +144,9 @@ class DataBase:
         if self.league == 'SLO':
             return pd.concat([g2df(match=None,
                                    timeline=None,
-                                   custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS].T),
                                    custom_positions=STANDARD_POSITIONS,
                                    team_names=list(g[1][['blue', 'red']]),
-                                   week=g[1]['week'], custom=True) for g in df.iterrows()])
+                                   week=g[1]['week']) for g in df.iterrows()])
         elif self.league == 'SCRIMS':
             return pd.concat([g2df(match=None,
                                    timeline=None,
@@ -196,7 +197,7 @@ class DataBase:
 
         return [g['gameId'] for g in games]
 
-    def close_conections(self):
+    def close_connections(self):
         self.mongo_cnx.close()
         self.sql_leagues_cnx.close()
 
@@ -207,6 +208,9 @@ class DataBase:
         else:
             dt1 = dt.strptime(date, '%d-%m-%Y')
         return int(dt.timestamp(dt1) * 1e3)
+
+    def generate_dataset(self):
+        return None
 
 
 def create_dirs():
@@ -256,4 +260,4 @@ def parse_args(args):
             else:
                 pass
     finally:
-        db.close_conections()
+        db.close_connections()
