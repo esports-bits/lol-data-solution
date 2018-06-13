@@ -12,25 +12,31 @@ def game_to_dataframe(match, timeline, **kwargs):
 
         return "{h}:{m}:{s}".format(h=int(h), m=int(m), s=int(s))
 
-    def ids_to_names(df):
+    def ids_to_names(df, database=None):
         # Champions
-        champs = champs_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='champions'))
+        if database is None:
+            champs = champs_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='champions'))
+            items = items_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='items'))
+            summs = summs_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='summoners'))
+            runes = runes_reforged_to_dataframe()
+        else:
+            champs = champs_to_dataframe(database.find_one({'_id': 'champions'}))
+            items = champs_to_dataframe(database.find_one({'_id': 'items'}))
+            summs = champs_to_dataframe(database.find_one({'_id': 'champions'}))
+            runes = champs_to_dataframe(database.find_one({'_id': 'champions'}))['runes']
         df1 = df.merge(
             champs.rename(columns={'name': 'champ_name'}), left_on='championId', right_on='id').drop('id', axis=1)
         # Items
-        items = items_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='items'))
         df2 = df1
         for name in ITEMS_COLS:
             df2 = df2.merge(items.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
                             right_on='id', how='left').drop('id', axis=1)
         # Summoner spells
-        summs = summs_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='summoners'))
         df3 = df2
         for name in SUMMS_COLS:
             df3 = df3.merge(summs.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
                             right_on='id', how='left').drop('id', axis=1)
         # Runes
-        runes = runes_reforged_to_dataframe()
         df4 = df3
         try:
             for name in RUNES_COLS:

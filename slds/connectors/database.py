@@ -8,12 +8,14 @@ from itertools import chain
 from riotwatcher import RiotWatcher
 from tqdm import tqdm
 from requests.exceptions import HTTPError
+from converters.data2files import get_runes_reforged_json
 from converters.data2frames import game_to_dataframe as g2df
 from sqlalchemy import create_engine
 from datetime import datetime as dt, timedelta
 from config.constants import LEAGUES_DATA_DICT, SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
     OFFICIAL_LEAGUE, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, \
-    TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXCEL_EXPORT_PATH_MERGED, EXPORTS_DIR, EXCEL_EXPORT_PATH
+    TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXCEL_EXPORT_PATH_MERGED, EXPORTS_DIR, EXCEL_EXPORT_PATH, \
+    RIFT_GAMES_QUEUES
 
 
 class DataBase:
@@ -26,6 +28,7 @@ class DataBase:
         self.mongo_soloq_tl_col = self.mongo_cnx.slds.soloq_tl
         self.mongo_slo_m_col = self.mongo_cnx.slds.slo_m
         self.mongo_slo_tl_col = self.mongo_cnx.slds.slo_tl
+        self.mongo_static_data = self.mongo_cnx.slds.static_data
         self.sql_leagues_cnx = pymysql.connect(**SQL_LEAGUES_CONN)
 
     def get_recent_game_ids(self, **kwargs):
@@ -37,7 +40,7 @@ class DataBase:
             print('\t{} account ids found.'.format(len(acc_ids)))
 
             # New Solo Q game ids
-            new_game_ids = self.get_soloq_game_ids(acc_ids=acc_ids, **kwargs)
+            new_game_ids = self.get_game_ids(acc_ids=acc_ids, **kwargs)
             return current_game_ids, new_game_ids
 
     def get_account_ids(self, **kwargs):
@@ -99,9 +102,9 @@ class DataBase:
             print('\tAll games already downloaded.')
         return None
 
-    def get_soloq_game_ids(self, acc_ids, **kwargs):
+    def get_game_ids(self, acc_ids, **kwargs):
         matchlist_kwargs = {k: kwargs[k] for k in ['begin_index', 'n_games']}
-        matchlist_kwargs['queue'] = 420
+        matchlist_kwargs['queue'] = RIFT_GAMES_QUEUES
         matchlist_kwargs['region'] = self.region
         if matchlist_kwargs['n_games'] is not None and matchlist_kwargs['begin_index'] is not None:
             matchlist_kwargs['end_index'] = matchlist_kwargs['begin_index'] + matchlist_kwargs.pop('n_games')
@@ -146,26 +149,28 @@ class DataBase:
                                    timeline=None,
                                    custom_positions=STANDARD_POSITIONS,
                                    team_names=list(g[1][['blue', 'red']]),
-                                   week=g[1]['week']) for g in df.iterrows()])
+                                   week=g[1]['week'], database=self.mongo_static_data) for g in df.iterrows()])
         elif self.league == 'SCRIMS':
             return pd.concat([g2df(match=None,
                                    timeline=None,
                                    custom_positions=list(g[1][SCRIMS_POSITIONS_COLS]),
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
-                                   custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n'], blue_win=g[1]['blue_win']
+                                   custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n'], blue_win=g[1]['blue_win'],
+                                   database=self.mongo_static_data
                                    ) for g in df.iterrows()])
         elif self.league == 'LCK':
             return pd.concat([g2df(match=None,
                                    timeline=None,
                                    week=g[1]['week'], custom=False,
-                                   custom_positions=STANDARD_POSITIONS) for g in df.iterrows()])
+                                   custom_positions=STANDARD_POSITIONS, database=self.mongo_static_data
+                                   ) for g in df.iterrows()])
         elif self.league == 'SOLOQ':
             return pd.concat([g2df(match=self.mongo_soloq_m_col.find_one({'platformId': self.region,
                                                                           'gameId': int(gid)}, {'_id': 0}),
                                    timeline=self.mongo_soloq_tl_col.find_one({'platformId': self.region,
                                                                               'gameId': str(gid)}, {'_id': 0}),
-                                   custom=False
+                                   custom=False, database=self.mongo_static_data
                                    ) for gid in list(df.game_id)])
 
     def get_stored_game_ids(self, **kwargs):
@@ -212,6 +217,19 @@ class DataBase:
     def generate_dataset(self):
         return None
 
+    def save_static_data_files(self):
+        versions = {'versions': self.rw.static_data.versions(region=self.region), '_id': 'versions'}
+        champs = self.rw.static_data.champions(region=self.region, version=versions['versions'][0])
+        items = self.rw.static_data.items(region=self.region, version=versions['versions'][0])
+        summs = self.rw.static_data.summoner_spells(region=self.region, version=versions['versions'][0])
+        runes = {'runes': get_runes_reforged_json(), '_id': 'runes_reforged'}
+        champs['_id'], items['_id'], summs['_id'] = ['champions', 'items', 'summoner_spells']
+        self.mongo_static_data.replace_one(filter={'_id': 'versions'}, replacement=versions, upsert=True)
+        self.mongo_static_data.replace_one(filter={'_id': 'champions'}, replacement=champs, upsert=True)
+        self.mongo_static_data.replace_one(filter={'_id': 'items'}, replacement=items, upsert=True)
+        self.mongo_static_data.replace_one(filter={'_id': 'summoner_spells'}, replacement=summs, upsert=True)
+        self.mongo_static_data.replace_one(filter={'_id': 'runes_reforged'}, replacement=runes, upsert=True)
+
 
 def create_dirs():
     if not os.path.exists(EXPORTS_DIR):
@@ -225,6 +243,10 @@ def parse_args(args):
     league = args.league.upper()
     db = DataBase(region, league)
     try:
+        if args.update_static_data:
+            db.save_static_data_files()
+            print('Static data updated.')
+
         if args.download:
             print('Downloading.')
             if league == 'SOLOQ':
