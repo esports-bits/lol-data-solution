@@ -185,10 +185,10 @@ class FileSystem:
                                    ) for gid in list(df.game_id)])
 
     def save_static_data_files(self):
-        versions = self.rw.static_data.versions(region=self.region)
-        champs = self.rw.static_data.champions(region=self.region, version=versions[0])
-        items = self.rw.static_data.items(region=self.region, version=versions[0])
-        summs = self.rw.static_data.summoner_spells(region=self.region, version=versions[0])
+        versions = self.rw.static_data.versions(region=REGIONS[self.region])
+        champs = self.rw.static_data.champions(region=REGIONS[self.region], version=versions[0])
+        items = self.rw.static_data.items(region=REGIONS[self.region], version=versions[0])
+        summs = self.rw.static_data.summoner_spells(region=REGIONS[self.region], version=versions[0])
         save_runes_reforged_json()
         write_json(versions, STATIC_DATA_DIR, file_name='versions')
         write_json(champs, STATIC_DATA_DIR, file_name='champions')
