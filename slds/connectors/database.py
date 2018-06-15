@@ -13,9 +13,9 @@ from converters.data2frames import game_to_dataframe as g2df
 from sqlalchemy import create_engine
 from datetime import datetime as dt, timedelta
 from config.constants import LEAGUES_DATA_DICT, SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
-    OFFICIAL_LEAGUE, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, \
+    API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, \
     TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXCEL_EXPORT_PATH_MERGED, EXPORTS_DIR, EXCEL_EXPORT_PATH, \
-    RIFT_GAMES_QUEUES
+    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT
 
 
 class DataBase:
@@ -31,17 +31,31 @@ class DataBase:
         self.mongo_static_data = self.mongo_cnx.slds.static_data
         self.sql_leagues_cnx = pymysql.connect(**SQL_LEAGUES_CONN)
 
-    def get_recent_game_ids(self, **kwargs):
+    def get_old_and_new_game_ids(self, **kwargs):
         if self.league == 'SOLOQ':
-            cursor = self.mongo_soloq_m_col.find({'platformId': self.region.upper()}, {'_id': 0, 'gameId': 1})
-            current_game_ids = [gid['gameId'] for gid in cursor]
+            cursor = self.mongo_soloq_m_col.find({'platformId': self.region.upper()}, {'_id': 0,
+                                                                                       'gameId': 1,
+                                                                                       'platformId': 1})
+            current_game_ids = [(gid['gameId'], gid['platformId']) for gid in cursor]
 
             acc_ids = self.get_account_ids(**kwargs)
             print('\t{} account ids found.'.format(len(acc_ids)))
 
             # New Solo Q game ids
             new_game_ids = self.get_game_ids(acc_ids=acc_ids, **kwargs)
-            return current_game_ids, new_game_ids
+        elif self.league == 'SLO':
+            cursor1 = self.sql_leagues_cnx.cursor()
+            query = 'SELECT game_id, realm, hash FROM slo'
+            cursor1.execute(query)
+            new_game_ids = [(gid[0], gid[1], gid[2]) for gid in cursor1]
+            platforms = [gid[1] for gid in new_game_ids]
+
+            cursor2 = self.mongo_slo_m_col.find({'platformId': {'$in': platforms}}, {'_id': 0,
+                                                                                     'gameId': 1,
+                                                                                     'platformId': 1})
+            current_game_ids = [(gid['gameId'], gid['platformId']) for gid in cursor2]
+
+        return current_game_ids, new_game_ids
 
     def get_account_ids(self, **kwargs):
         if kwargs['team_abbv'] is not None:
@@ -73,29 +87,31 @@ class DataBase:
         cursor.execute(query)
         return [gid[0] for gid in cursor]
 
-    @staticmethod
-    def get_new_ids(old, new):
-        return list(set(map(int, new)) - set(map(int, old)))
+    def get_new_ids(self, old, new):
+        if self.league == SLO:
+            return [gid for gid in new if (gid[0], gid[1]) not in old]
+        return list(set(new) - set(old))
 
     def download_games(self, current_game_ids, new_game_ids):
         def tournament_match_to_dict(id1, hash1, tournament):
             with urllib.request.urlopen(TOURNAMENT_GAME_ENDPOINT.format(tr=tournament, id=id1, hash=hash1)) as url:
                 match = json.loads(url.read().decode())
-            with urllib.request.urlopen(TOURNAMENT_GAME_ENDPOINT.format(tr=tournament, id=id1, hash=hash1)) as url:
+            with urllib.request.urlopen(TOURNAMENT_TL_ENDPOINT.format(tr=tournament, id=id1, hash=hash1)) as url:
                 tl = json.loads(url.read().decode())
             return match, tl
+
         ids_not_in_db = self.get_new_ids(current_game_ids, new_game_ids)
         print('\t{} new games to be downloaded.'.format(len(ids_not_in_db)))
         if ids_not_in_db:
             for item in tqdm(ids_not_in_db, desc='\tDownloading games'):
                 try:
-                    if LEAGUES_DATA_DICT[self.league][OFFICIAL_LEAGUE]:
-                        pass
+                    if item[1] not in REGIONS.values():
+                        match, timeline = tournament_match_to_dict(item[0], item[2], item[1])
                     else:
-                        match = self.rw.match.by_id(match_id=item, region=self.region)
-                        timeline = self.rw.match.timeline_by_match(match_id=item, region=self.region)
-                        data = {'match': match, 'timeline': timeline}
-                        self.__save_match_raw_data(data=data)
+                        match = self.rw.match.by_id(match_id=item[0], region=item[1])
+                        timeline = self.rw.match.timeline_by_match(match_id=item[0], region=item[1])
+                    data = {'match': match, 'timeline': timeline}
+                    self.__save_match_raw_data(data=data)
                 except HTTPError:
                     pass
         else:
@@ -115,10 +131,10 @@ class DataBase:
 
         matches = list(chain.from_iterable(
             [self.rw.match.matchlist_by_account(account_id=acc, **matchlist_kwargs)['matches'] for acc in acc_ids]))
-        result = list(set([m['gameId'] for m in matches]))
+        result = list(set([(m['gameId'], m['platformID']) for m in matches]))
         return result
 
-    def __save_match_raw_data(self, data, **kwargs):
+    def __save_match_raw_data(self, data):
         if isinstance(data, dict):
             game_id = str(data['match']['gameId'])
             platform_id = data['match']['platformId']
@@ -127,6 +143,9 @@ class DataBase:
             if self.league == SOLOQ:
                 self.mongo_soloq_m_col.insert_one(data['match'])
                 self.mongo_soloq_tl_col.insert_one(data['timeline'])
+            elif self.league == SLO:
+                self.mongo_slo_m_col.insert_one(data['match'])
+                self.mongo_slo_tl_col.insert_one(data['timeline'])
         else:
             raise TypeError('Dict expected at data param. Should be passed as shown here: {"match": match_dict, '
                             '"timeline": timeline_dict}.')
@@ -174,33 +193,54 @@ class DataBase:
                                    ) for gid in list(df.game_id)])
 
     def get_stored_game_ids(self, **kwargs):
-        query = {}
-        if kwargs['team_abbv'] is not None or kwargs['competition'] is not None:
-            acc_ids = self.get_account_ids(**kwargs)
-            query['participantIdentities.player.currentAccountId'] = {'$in': acc_ids}
-        if kwargs['patch'] is not None:
-            patch = kwargs['patch']
-            print('\tLooking for games played on patch {}.'.format(patch))
-            regex_patch = '^' + '{}'.format(patch).replace('.', r'\.')
-            query['gameVersion'] = {'$regex': regex_patch}
-        if kwargs['begin_time'] is not None:
-            print('\tLooking for games past {} at 00:00:00.'.format(kwargs['begin_time']))
-            timestamp = self.__str_date_to_timestamp(kwargs['begin_time'])
-            query['gameCreation'] = {}
-            query['gameCreation']['$gte'] = timestamp
-        if kwargs['end_time'] is not None:
-            print('\tLooking for games before {} at 23:59:59.'.format(kwargs['end_time']))
-            td1 = timedelta(hours=23, minutes=59, seconds=59)
-            timestamp = self.__str_date_to_timestamp(kwargs['end_time'], td1)
-            try:
-                query['gameCreation']['$lte'] = timestamp
-            except KeyError:
-                query['gameCreation'] = {}
-                query['gameCreation']['$lte'] = timestamp
+        mongo_query = {}
+        sql_query = ""
+        if self.league == SOLOQ:
+            if kwargs['team_abbv'] is not None or kwargs['competition'] is not None:
+                acc_ids = self.get_account_ids(**kwargs)
+                mongo_query['participantIdentities.player.currentAccountId'] = {'$in': acc_ids}
+            if kwargs['patch'] is not None:
+                patch = kwargs['patch']
+                print('\tLooking for games played on patch {}.'.format(patch))
+                regex_patch = '^' + '{}'.format(patch).replace('.', r'\.')
+                mongo_query['gameVersion'] = {'$regex': regex_patch}
+            if kwargs['begin_time'] is not None:
+                print('\tLooking for games past {} at 00:00:00.'.format(kwargs['begin_time']))
+                timestamp = self.__str_date_to_timestamp(kwargs['begin_time'])
+                mongo_query['gameCreation'] = {}
+                mongo_query['gameCreation']['$gte'] = timestamp
+            if kwargs['end_time'] is not None:
+                print('\tLooking for games before {} at 23:59:59.'.format(kwargs['end_time']))
+                td1 = timedelta(hours=23, minutes=59, seconds=59)
+                timestamp = self.__str_date_to_timestamp(kwargs['end_time'], td1)
+                try:
+                    mongo_query['gameCreation']['$lte'] = timestamp
+                except KeyError:
+                    mongo_query['gameCreation'] = {}
+                    mongo_query['gameCreation']['$lte'] = timestamp
 
-        games = self.mongo_soloq_m_col.find(query, {'_id': 0, 'gameId': 1})
+            games = self.mongo_soloq_m_col.find(mongo_query, {'_id': 0, 'gameId': 1})
 
-        return [g['gameId'] for g in games]
+            return [g['gameId'] for g in games]
+        elif self.league == SLO:
+            if 'season' in kwargs:
+                if 'WHERE' not in sql_query:
+                    sql_query = sql_query + ' WHERE'
+                else:
+                    sql_query = sql_query + ' AND'
+                sql_query = sql_query + 'season = {}'.format(kwargs['season'])
+            if 'split' in kwargs:
+                if 'WHERE' not in sql_query:
+                    sql_query = sql_query + ' WHERE'
+                else:
+                    sql_query = sql_query + ' AND'
+                sql_query = sql_query + 'split = {}'.format(kwargs['split'])
+            if 'split' in kwargs:
+                if 'WHERE' not in sql_query:
+                    sql_query = sql_query + ' WHERE'
+                else:
+                    sql_query = sql_query + ' AND'
+                sql_query = sql_query + 'split = {}'.format(kwargs['split'])
 
     def close_connections(self):
         self.mongo_cnx.close()
@@ -249,16 +289,13 @@ def parse_args(args):
 
         if args.download:
             print('Downloading.')
-            if league == 'SOLOQ':
-                current_game_ids, new_game_ids = db.get_recent_game_ids(**kwargs)
-                db.download_games(current_game_ids=current_game_ids, new_game_ids=new_game_ids)
-                print("\tGames downloaded.")
-            else:
-                pass
+            current_game_ids, new_game_ids = db.get_old_and_new_game_ids(**kwargs)
+            db.download_games(current_game_ids=current_game_ids, new_game_ids=new_game_ids)
+            print("\tGames downloaded.")
 
         if args.export:
             print('Exporting.')
-            if league == 'SOLOQ':
+            if league == SOLOQ:
                 stored_game_ids = db.get_stored_game_ids(**kwargs)
                 print('\t{} games found.'.format(len(stored_game_ids)))
                 df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id'})
@@ -279,7 +316,7 @@ def parse_args(args):
                     return
                 final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH])
                 print("\tGames exported.")
-            else:
+            elif league == SLO:
                 pass
     finally:
         db.close_connections()
