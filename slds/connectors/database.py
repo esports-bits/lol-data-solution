@@ -12,10 +12,11 @@ from converters.data2files import get_runes_reforged_json
 from converters.data2frames import game_to_dataframe as g2df
 from sqlalchemy import create_engine
 from datetime import datetime as dt, timedelta
+import pickle
 from config.constants import LEAGUES_DATA_DICT, SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
     API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, \
     TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXCEL_EXPORT_PATH_MERGED, EXPORTS_DIR, EXCEL_EXPORT_PATH, \
-    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT
+    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT, SQL_EXPORTS_ENGINE
 
 
 class DataBase:
@@ -164,10 +165,14 @@ class DataBase:
 
     def concat_games(self, df):
         if self.league == 'SLO':
-            return pd.concat([g2df(match=None,
-                                   timeline=None,
+            return pd.concat([g2df(match=self.mongo_slo_m_col.find_one({'platformId': g[1]['realm'],
+                                                                        'gameId': g[1]['game_id']}),
+                                   timeline=self.mongo_slo_tl_col.find_one({'platformId': str(g[1]['realm']),
+                                                                            'gameId': str(g[1]['game_id'])}),
+                                   custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS].T),
                                    custom_positions=STANDARD_POSITIONS,
                                    team_names=list(g[1][['blue', 'red']]),
+                                   custom=(g[1]['hash'] is None),
                                    week=g[1]['week'], database=self.mongo_static_data) for g in df.iterrows()])
         elif self.league == 'SCRIMS':
             return pd.concat([g2df(match=None,
@@ -185,16 +190,16 @@ class DataBase:
                                    custom_positions=STANDARD_POSITIONS, database=self.mongo_static_data
                                    ) for g in df.iterrows()])
         elif self.league == 'SOLOQ':
-            return pd.concat([g2df(match=self.mongo_soloq_m_col.find_one({'platformId': self.region,
-                                                                          'gameId': int(gid)}, {'_id': 0}),
-                                   timeline=self.mongo_soloq_tl_col.find_one({'platformId': self.region,
-                                                                              'gameId': str(gid)}, {'_id': 0}),
+            return pd.concat([g2df(match=self.mongo_soloq_m_col.find_one({'platformId': gid[1][1],
+                                                                          'gameId': int(gid[1][0])}, {'_id': 0}),
+                                   timeline=self.mongo_soloq_tl_col.find_one({'platformId': gid[1][1],
+                                                                              'gameId': str(gid[1][0])}, {'_id': 0}),
                                    custom=False, database=self.mongo_static_data
-                                   ) for gid in list(df.game_id)])
+                                   ) for gid in df.iterrows()])
 
     def get_stored_game_ids(self, **kwargs):
         mongo_query = {}
-        sql_query = ""
+        sql_query = "SELECT game_id, realm FROM slo"
         if self.league == SOLOQ:
             if kwargs['team_abbv'] is not None or kwargs['competition'] is not None:
                 acc_ids = self.get_account_ids(**kwargs)
@@ -219,28 +224,27 @@ class DataBase:
                     mongo_query['gameCreation'] = {}
                     mongo_query['gameCreation']['$lte'] = timestamp
 
-            games = self.mongo_soloq_m_col.find(mongo_query, {'_id': 0, 'gameId': 1})
+            games = self.mongo_soloq_m_col.find(mongo_query, {'_id': 0, 'gameId': 1, 'platformId': 1})
 
-            return [g['gameId'] for g in games]
+            return [(g['gameId'], g['platformId']) for g in games]
         elif self.league == SLO:
-            if 'season' in kwargs:
+            if kwargs['season'] is not None:
+                print('\tExporting games from season {}.'.format(kwargs['season']))
                 if 'WHERE' not in sql_query:
                     sql_query = sql_query + ' WHERE'
                 else:
                     sql_query = sql_query + ' AND'
                 sql_query = sql_query + 'season = {}'.format(kwargs['season'])
-            if 'split' in kwargs:
+            if kwargs['split'] is not None:
+                print('\tExporting games from {} split.'.format(kwargs['split']))
                 if 'WHERE' not in sql_query:
                     sql_query = sql_query + ' WHERE'
                 else:
                     sql_query = sql_query + ' AND'
                 sql_query = sql_query + 'split = {}'.format(kwargs['split'])
-            if 'split' in kwargs:
-                if 'WHERE' not in sql_query:
-                    sql_query = sql_query + ' WHERE'
-                else:
-                    sql_query = sql_query + ' AND'
-                sql_query = sql_query + 'split = {}'.format(kwargs['split'])
+            cursor = self.sql_leagues_cnx.cursor()
+            cursor.execute(sql_query)
+            return [(g['game_id'], g['realm']) for g in cursor]
 
     def close_connections(self):
         self.mongo_cnx.close()
@@ -298,7 +302,7 @@ def parse_args(args):
             if league == SOLOQ:
                 stored_game_ids = db.get_stored_game_ids(**kwargs)
                 print('\t{} games found.'.format(len(stored_game_ids)))
-                df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id'})
+                df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id', 1: 'realm'})
                 concatenated_df = db.concat_games(df)
                 final_df = concatenated_df
 
@@ -311,12 +315,21 @@ def parse_args(args):
                                               how='left')
                     cnx.close()
 
-                    final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH_MERGED])
+                    final_df.to_excel(LEAGUES_DATA_DICT[SOLOQ][EXCEL_EXPORT_PATH_MERGED])
                     print("\tGames merged and exported.")
                     return
-                final_df.to_excel(LEAGUES_DATA_DICT['SOLOQ'][EXCEL_EXPORT_PATH])
-                print("\tGames exported.")
+                final_df.to_excel(LEAGUES_DATA_DICT[SOLOQ][EXCEL_EXPORT_PATH])
+                print("\tSolo queue games exported.")
             elif league == SLO:
-                pass
+                engine = create_engine(SQL_LEAGUES_ENGINE)
+                cnx = engine.connect()
+                df1 = pd.read_sql_table(con=cnx, table_name='slo', index_col='index')
+                concatenated_df2 = db.concat_games(df1)
+                concatenated_df2.to_excel('slo_dataset.xlsx')
+                engine2 = create_engine(SQL_EXPORTS_ENGINE)
+                cnx2 = engine2.connect()
+                concatenated_df2.to_sql(con=cnx2, name='slo', if_exists='replace')
+                # concatenated_df.to_excel(LEAGUES_DATA_DICT[SLO][EXCEL_EXPORT_PATH])
+                print("\tSLO games exported.")
     finally:
         db.close_connections()

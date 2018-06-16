@@ -109,6 +109,12 @@ def game_participant_ids_to_dataframe(participant_ids, custom):
                                            index=(i,)) for i, p in enumerate(participant_ids)])
         except KeyError:
             pass
+        try:
+            return pd.concat([pd.DataFrame({'participantId': p['participantId'],
+                                            'summonerName': p['player']['summonerName']},
+                                           index=(i,)) for i, p in enumerate(participant_ids)])
+        except KeyError:
+            pass
     return pd.concat([pd.DataFrame(p_id, index=(i,)) for i, p_id in enumerate(participant_ids)])
 
 
