@@ -244,7 +244,6 @@ class DataBase:
                     sql_query = sql_query + ' AND'
                 sql_query = sql_query + ' split = "{}"'.format(kwargs['split'])
             cursor = self.sql_leagues_cnx.cursor()
-            print(sql_query)
             cursor.execute(sql_query)
             return [g for g in cursor]
 
