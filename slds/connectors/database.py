@@ -132,7 +132,7 @@ class DataBase:
 
         matches = list(chain.from_iterable(
             [self.rw.match.matchlist_by_account(account_id=acc, **matchlist_kwargs)['matches'] for acc in acc_ids]))
-        result = list(set([(m['gameId'], m['platformID']) for m in matches]))
+        result = list(set([(m['gameId'], m['platformId']) for m in matches]))
         return result
 
     def __save_match_raw_data(self, data):
@@ -166,9 +166,10 @@ class DataBase:
     def concat_games(self, df):
         if self.league == 'SLO':
             return pd.concat([g2df(match=self.mongo_slo_m_col.find_one({'platformId': g[1]['realm'],
-                                                                        'gameId': g[1]['game_id']}),
+                                                                        'gameId': g[1]['game_id']}, {'_id': 0}),
                                    timeline=self.mongo_slo_tl_col.find_one({'platformId': str(g[1]['realm']),
-                                                                            'gameId': str(g[1]['game_id'])}),
+                                                                            'gameId': str(g[1]['game_id'])},
+                                                                           {'_id': 0}),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS].T),
                                    custom_positions=STANDARD_POSITIONS,
                                    team_names=list(g[1][['blue', 'red']]),
@@ -234,17 +235,18 @@ class DataBase:
                     sql_query = sql_query + ' WHERE'
                 else:
                     sql_query = sql_query + ' AND'
-                sql_query = sql_query + 'season = {}'.format(kwargs['season'])
+                sql_query = sql_query + ' season = "{}"'.format(kwargs['season'])
             if kwargs['split'] is not None:
                 print('\tExporting games from {} split.'.format(kwargs['split']))
                 if 'WHERE' not in sql_query:
                     sql_query = sql_query + ' WHERE'
                 else:
                     sql_query = sql_query + ' AND'
-                sql_query = sql_query + 'split = {}'.format(kwargs['split'])
+                sql_query = sql_query + ' split = "{}"'.format(kwargs['split'])
             cursor = self.sql_leagues_cnx.cursor()
+            print(sql_query)
             cursor.execute(sql_query)
-            return [(g['game_id'], g['realm']) for g in cursor]
+            return [g for g in cursor]
 
     def close_connections(self):
         self.mongo_cnx.close()
@@ -299,37 +301,37 @@ def parse_args(args):
 
         if args.export:
             print('Exporting.')
-            if league == SOLOQ:
-                stored_game_ids = db.get_stored_game_ids(**kwargs)
-                print('\t{} games found.'.format(len(stored_game_ids)))
-                df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id', 1: 'realm'})
-                concatenated_df = db.concat_games(df)
-                final_df = concatenated_df
-
-                # Merge Solo Q players info with data
-                if args.merge_soloq:
-                    engine = create_engine(SQL_LEAGUES_ENGINE)
-                    cnx = engine.connect()
-                    player_info_df = pd.read_sql_table(con=cnx, table_name='soloq')
-                    final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
-                                              how='left')
-                    cnx.close()
-
-                    final_df.to_excel(LEAGUES_DATA_DICT[SOLOQ][EXCEL_EXPORT_PATH_MERGED])
-                    print("\tGames merged and exported.")
-                    return
-                final_df.to_excel(LEAGUES_DATA_DICT[SOLOQ][EXCEL_EXPORT_PATH])
-                print("\tSolo queue games exported.")
-            elif league == SLO:
+            stored_game_ids = db.get_stored_game_ids(**kwargs)
+            print('\t{} games found.'.format(len(stored_game_ids)))
+            if league == SLO:
                 engine = create_engine(SQL_LEAGUES_ENGINE)
                 cnx = engine.connect()
-                df1 = pd.read_sql_table(con=cnx, table_name='slo', index_col='index')
-                concatenated_df2 = db.concat_games(df1)
-                concatenated_df2.to_excel('slo_dataset.xlsx')
-                engine2 = create_engine(SQL_EXPORTS_ENGINE)
-                cnx2 = engine2.connect()
-                concatenated_df2.to_sql(con=cnx2, name='slo', if_exists='replace')
-                # concatenated_df.to_excel(LEAGUES_DATA_DICT[SLO][EXCEL_EXPORT_PATH])
-                print("\tSLO games exported.")
+                slo_info_df = pd.read_sql_table(con=cnx, table_name='slo')
+                slo_info_df['gid_realm'] = slo_info_df.apply(lambda x: str(x['game_id']) + '_' + str(x['realm']),
+                                                             axis=1)
+                ls1 = [str(g[0]) + '_' + str(g[1]) for g in stored_game_ids]
+                df = slo_info_df.loc[slo_info_df['gid_realm'].isin(ls1)]
+            else:
+                df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id', 1: 'realm'})
+            concatenated_df = db.concat_games(df)
+            final_df = concatenated_df
+
+            # Merge Solo Q players info with data
+            if args.merge_soloq and league == SOLOQ:
+                engine = create_engine(SQL_LEAGUES_ENGINE)
+                cnx = engine.connect()
+                player_info_df = pd.read_sql_table(con=cnx, table_name='soloq')
+                final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
+                                          how='left')
+                cnx.close()
+
+                final_df.to_excel(LEAGUES_DATA_DICT[SOLOQ][EXCEL_EXPORT_PATH_MERGED])
+                print("\tGames merged and exported.")
+                return
+            with open('data.pickle', 'wb') as f:
+                # Pickle the 'data' dictionary using the highest protocol available.
+                pickle.dump(final_df, f, pickle.HIGHEST_PROTOCOL)
+            final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+
     finally:
         db.close_connections()
