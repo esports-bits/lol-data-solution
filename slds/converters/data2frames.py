@@ -1,3 +1,5 @@
+from itertools import chain
+
 import pandas as pd
 import datetime
 from converters.kwargs2whatever import export_dataset_kwargs
@@ -20,10 +22,10 @@ def game_to_dataframe(match, timeline, **kwargs):
             summs = summs_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='summoners'))
             runes = runes_reforged_to_dataframe()
         else:
-            champs = champs_to_dataframe(database.find_one({'_id': 'champions'}))
-            items = champs_to_dataframe(database.find_one({'_id': 'items'}))
-            summs = champs_to_dataframe(database.find_one({'_id': 'champions'}))
-            runes = champs_to_dataframe(database.find_one({'_id': 'champions'}))['runes']
+            champs = champs_to_dataframe(database.find_one({'_id': 'champions'}, {'_id': 0}))
+            items = items_to_dataframe(database.find_one({'_id': 'items'}, {'_id': 0}))
+            summs = summs_to_dataframe(database.find_one({'_id': 'summoner_spells'}, {'_id': 0}))
+            runes = runes_reforged_to_dataframe(data=database.find_one({'_id': 'runes_reforged'}, {'_id': 0})['runes'])
         df1 = df.merge(
             champs.rename(columns={'name': 'champ_name'}), left_on='championId', right_on='id').drop('id', axis=1)
         # Items
@@ -71,8 +73,10 @@ def game_to_dataframe(match, timeline, **kwargs):
     df_result.gameCreation = df_result.gameCreation.apply(
         lambda x: datetime.datetime.fromtimestamp(x / 1e3).strftime('%Y-%m-%d %H:%M:%S'))
     df_result['game_duration_time'] = df_result.gameDuration.apply(timestamp_to_readable_time)
-
-    df_result2 = ids_to_names(df_result)
+    if 'database' in kwargs:
+        df_result2 = ids_to_names(df_result, database=kwargs['database'])
+    else:
+        df_result2 = ids_to_names(df_result)
     return df_result2.T.reset_index().drop_duplicates(subset='index', keep='first').set_index('index').T
 
 
@@ -303,13 +307,67 @@ def timeline_relevant_stats_to_dataframe(timeline):
                 'ccs_at_5': ccs5[0] if ccs5 else None, 'ccs_at_10': ccs10[0] if ccs10 else None,
                 'ccs_at_15': ccs15[0] if ccs15 else None, 'ccs_at_20': ccs20[0] if ccs20 else None}
 
+    def get_wards_placed(tl):
+        events = list(chain.from_iterable([f['events'] for f in tl['frames']]))
+        ward_cols = ['yellow_trinkets', 'control_wards', 'undefined', 'sight_wards']
+        placed_cols = [col + '_placed' for col in ward_cols]
+        killed_cols = [col + '_killed' for col in ward_cols]
+
+        placed_ward_events = [event for event in events if event['type'] == 'WARD_PLACED']
+        killed_ward_events = [event for event in events if event['type'] == 'WARD_PLACED']
+
+        df_placed = pd.DataFrame(
+            [(event['creatorId'], event['wardType'], event['timestamp']) for event in placed_ward_events]).groupby(
+            [0, 1], as_index=False).count()
+        df_killed = pd.DataFrame(
+            [(event['creatorId'], event['wardType'], event['timestamp']) for event in killed_ward_events]).groupby(
+            [0, 1], as_index=False).count()
+
+        df_placed.rename(columns={0: 'participant_id', 1: 'ward_type', 2: 'count'}, inplace=True)
+        df_killed.rename(columns={0: 'participant_id', 1: 'ward_type', 2: 'count'}, inplace=True)
+
+        df_placed.set_index('participant_id', inplace=True)
+        df_killed.set_index('participant_id', inplace=True)
+
+        yt_p, cw_p, un_p, sw_p = df_placed.loc[df_placed['ward_type'] == 'YELLOW_TRINKET'], df_placed.loc[
+            df_placed['ward_type'] == 'CONTROL_WARD'], df_placed.loc[df_placed['ward_type'] == 'UNDEFINED'], \
+            df_placed.loc[df_placed['ward_type'] == 'YELLOW_TRINKET']
+        yt_k, cw_k, un_k, sw_k = df_killed.loc[df_killed['ward_type'] == 'YELLOW_TRINKET'], df_killed.loc[
+            df_killed['ward_type'] == 'CONTROL_WARD'], df_killed.loc[df_killed['ward_type'] == 'UNDEFINED'],\
+            df_killed.loc[df_killed['ward_type'] == 'YELLOW_TRINKET']
+
+        df1 = pd.concat([yt_p, cw_p, un_p, sw_p], axis=1).drop('ward_type', axis=1)
+        df2 = pd.concat([yt_k, cw_k, un_k, sw_k], axis=1).drop('ward_type', axis=1)
+
+        df1.columns = placed_cols
+        df2.columns = killed_cols
+
+        df1.reset_index(inplace=True)
+        df2.reset_index(inplace=True)
+
+        df1.participant_id = df1.participant_id - 1
+        df2.participant_id = df2.participant_id - 1
+
+        df1.set_index('participant_id', inplace=True)
+        df2.set_index('participant_id', inplace=True)
+
+        df_result = pd.concat([df1, df2], axis=1).fillna(0)
+
+        return df_result.astype(int)
+
     stats = timeline_participant_stats_to_dataframe(timeline)
     ps = [stats.loc[stats.participantId == p_id] for p_id in range(1, 11)]
-    return pd.concat([pd.DataFrame(timeto_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
+    df1 = pd.concat([pd.DataFrame(timeto_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
+    wards = get_wards_placed(timeline)
+    return df1
+    # return pd.concat([df1, wards], axis=1)
 
 
-def runes_reforged_to_dataframe():
-    runes = read_json(save_dir=STATIC_DATA_DIR, file_name='runes_reforged')
+def runes_reforged_to_dataframe(data=None):
+    if data:
+        runes = data
+    else:
+        runes = read_json(save_dir=STATIC_DATA_DIR, file_name='runes_reforged')
     runes1 = pd.DataFrame(runes)[STATIC_DATA_RELEVANT_COLS]
     slots = [path['slots'] for path in runes]
     runes2 = pd.concat(
