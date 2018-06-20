@@ -1,5 +1,5 @@
+import pickle
 from itertools import chain
-
 import pandas as pd
 import datetime
 from converters.kwargs2whatever import export_dataset_kwargs
@@ -63,6 +63,7 @@ def game_to_dataframe(match, timeline, **kwargs):
     ps_df = game_participants_to_dataframe(participants)
     t_df = game_teams_to_dataframe(teams)
     tl_df = timeline_relevant_stats_to_dataframe(timeline)
+
     df_concat = pd.concat([m_df, ps_ids_df, ps_df, t_df, tl_df], axis=1)
 
     if kwargs:
@@ -357,10 +358,10 @@ def timeline_relevant_stats_to_dataframe(timeline):
 
     stats = timeline_participant_stats_to_dataframe(timeline)
     ps = [stats.loc[stats.participantId == p_id] for p_id in range(1, 11)]
-    df1 = pd.concat([pd.DataFrame(timeto_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
+    df_result = pd.concat([pd.DataFrame(timeto_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
     wards = get_wards_placed(timeline)
-    return df1
-    # return pd.concat([df1, wards], axis=1)
+    # return pd.concat([df_result, wards], axis=1)
+    return df_result
 
 
 def runes_reforged_to_dataframe(data=None):

@@ -3,7 +3,7 @@ def export_dataset_kwargs(df, kwargs):
         df['player_name'] = kwargs['custom_names']
 
     if 'team_names' in kwargs:
-        df.loc[:5, 'team_name'] = kwargs['team_names'][0]
+        df.loc[:4, 'team_name'] = kwargs['team_names'][0]
         df.loc[5:10, 'team_name'] = kwargs['team_names'][1]
 
     if 'custom_positions' in kwargs:
