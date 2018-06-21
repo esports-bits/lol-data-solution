@@ -315,13 +315,13 @@ def timeline_relevant_stats_to_dataframe(timeline):
         killed_cols = [col + '_killed' for col in ward_cols]
 
         placed_ward_events = [event for event in events if event['type'] == 'WARD_PLACED']
-        killed_ward_events = [event for event in events if event['type'] == 'WARD_PLACED']
+        killed_ward_events = [event for event in events if event['type'] == 'WARD_KILL']
 
         df_placed = pd.DataFrame(
             [(event['creatorId'], event['wardType'], event['timestamp']) for event in placed_ward_events]).groupby(
             [0, 1], as_index=False).count()
         df_killed = pd.DataFrame(
-            [(event['creatorId'], event['wardType'], event['timestamp']) for event in killed_ward_events]).groupby(
+            [(event['killerId'], event['wardType'], event['timestamp']) for event in killed_ward_events]).groupby(
             [0, 1], as_index=False).count()
 
         df_placed.rename(columns={0: 'participant_id', 1: 'ward_type', 2: 'count'}, inplace=True)
@@ -360,8 +360,8 @@ def timeline_relevant_stats_to_dataframe(timeline):
     ps = [stats.loc[stats.participantId == p_id] for p_id in range(1, 11)]
     df_result = pd.concat([pd.DataFrame(timeto_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
     wards = get_wards_placed(timeline)
-    # return pd.concat([df_result, wards], axis=1)
-    return df_result
+    # return df_result
+    return pd.concat([df_result, wards], axis=1)
 
 
 def runes_reforged_to_dataframe(data=None):
