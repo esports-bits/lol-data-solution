@@ -317,50 +317,51 @@ def timeline_relevant_stats_to_dataframe(timeline):
         placed_ward_events = [event for event in events if event['type'] == 'WARD_PLACED']
         killed_ward_events = [event for event in events if event['type'] == 'WARD_KILL']
 
-        df_placed = pd.DataFrame(
-            [(event['creatorId'], event['wardType'], event['timestamp']) for event in placed_ward_events]).groupby(
-            [0, 1], as_index=False).count()
-        df_killed = pd.DataFrame(
-            [(event['killerId'], event['wardType'], event['timestamp']) for event in killed_ward_events]).groupby(
-            [0, 1], as_index=False).count()
+        if placed_ward_events:
+            df_placed = pd.DataFrame(
+                [(event['creatorId'], event['wardType'], event['timestamp']) for event in placed_ward_events]).groupby(
+                [0, 1], as_index=False).count()
+            df_placed.rename(columns={0: 'participant_id', 1: 'ward_type', 2: 'count'}, inplace=True)
+            df_placed.set_index('participant_id', inplace=True)
+            yt_p, cw_p, un_p, sw_p = df_placed.loc[df_placed['ward_type'] == 'YELLOW_TRINKET'], df_placed.loc[
+                df_placed['ward_type'] == 'CONTROL_WARD'], df_placed.loc[df_placed['ward_type'] == 'UNDEFINED'], \
+                df_placed.loc[df_placed['ward_type'] == 'YELLOW_TRINKET']
+            df1 = pd.concat([yt_p, cw_p, un_p, sw_p], axis=1).drop('ward_type', axis=1)
+            df1.columns = placed_cols
+            df1.reset_index(inplace=True)
+            df1 = df1.loc[df1.participant_id != 0]
+            df1.participant_id = df1.participant_id - 1
+            df1.set_index('participant_id', inplace=True)
 
-        df_placed.rename(columns={0: 'participant_id', 1: 'ward_type', 2: 'count'}, inplace=True)
-        df_killed.rename(columns={0: 'participant_id', 1: 'ward_type', 2: 'count'}, inplace=True)
+        if killed_ward_events:
+            df_killed = pd.DataFrame(
+                [(event['killerId'], event['wardType'], event['timestamp']) for event in killed_ward_events]).groupby(
+                [0, 1], as_index=False).count()
+            df_killed.rename(columns={0: 'participant_id', 1: 'ward_type', 2: 'count'}, inplace=True)
+            df_killed.set_index('participant_id', inplace=True)
+            yt_k, cw_k, un_k, sw_k = df_killed.loc[df_killed['ward_type'] == 'YELLOW_TRINKET'], df_killed.loc[
+                df_killed['ward_type'] == 'CONTROL_WARD'], df_killed.loc[df_killed['ward_type'] == 'UNDEFINED'],\
+                df_killed.loc[df_killed['ward_type'] == 'YELLOW_TRINKET']
+            df2 = pd.concat([yt_k, cw_k, un_k, sw_k], axis=1).drop('ward_type', axis=1)
+            df2.columns = killed_cols
+            df2.reset_index(inplace=True)
+            df2 = df2.loc[df2.participant_id != 0]
+            df2.participant_id = df2.participant_id - 1
+            df2.set_index('participant_id', inplace=True)
 
-        df_placed.set_index('participant_id', inplace=True)
-        df_killed.set_index('participant_id', inplace=True)
-
-        yt_p, cw_p, un_p, sw_p = df_placed.loc[df_placed['ward_type'] == 'YELLOW_TRINKET'], df_placed.loc[
-            df_placed['ward_type'] == 'CONTROL_WARD'], df_placed.loc[df_placed['ward_type'] == 'UNDEFINED'], \
-            df_placed.loc[df_placed['ward_type'] == 'YELLOW_TRINKET']
-        yt_k, cw_k, un_k, sw_k = df_killed.loc[df_killed['ward_type'] == 'YELLOW_TRINKET'], df_killed.loc[
-            df_killed['ward_type'] == 'CONTROL_WARD'], df_killed.loc[df_killed['ward_type'] == 'UNDEFINED'],\
-            df_killed.loc[df_killed['ward_type'] == 'YELLOW_TRINKET']
-
-        df1 = pd.concat([yt_p, cw_p, un_p, sw_p], axis=1).drop('ward_type', axis=1)
-        df2 = pd.concat([yt_k, cw_k, un_k, sw_k], axis=1).drop('ward_type', axis=1)
-
-        df1.columns = placed_cols
-        df2.columns = killed_cols
-
-        df1.reset_index(inplace=True)
-        df2.reset_index(inplace=True)
-
-        df1.participant_id = df1.participant_id - 1
-        df2.participant_id = df2.participant_id - 1
-
-        df1.set_index('participant_id', inplace=True)
-        df2.set_index('participant_id', inplace=True)
-
-        df_result = pd.concat([df1, df2], axis=1).fillna(0)
-
-        return df_result.astype(int)
+        if placed_ward_events and killed_ward_events:
+            return pd.concat([df1, df2], axis=1).fillna(0).astype(int)
+        elif placed_ward_events:
+            return df1
+        elif killed_ward_events:
+            return df2
+        else:
+            return None
 
     stats = timeline_participant_stats_to_dataframe(timeline)
     ps = [stats.loc[stats.participantId == p_id] for p_id in range(1, 11)]
     df_result = pd.concat([pd.DataFrame(timeto_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
     wards = get_wards_placed(timeline)
-    # return df_result
     return pd.concat([df_result, wards], axis=1)
 
 
