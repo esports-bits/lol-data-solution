@@ -308,9 +308,9 @@ def timeline_relevant_stats_to_dataframe(timeline):
                 'ccs_at_5': ccs5[0] if ccs5 else None, 'ccs_at_10': ccs10[0] if ccs10 else None,
                 'ccs_at_15': ccs15[0] if ccs15 else None, 'ccs_at_20': ccs20[0] if ccs20 else None}
 
-    def get_wards_placed(tl):
+    def get_wards_placed_killed(tl):
         events = list(chain.from_iterable([f['events'] for f in tl['frames']]))
-        ward_cols = ['yellow_trinkets', 'control_wards', 'undefined', 'sight_wards']
+        ward_cols = ['yellow_trinkets', 'control_wards', 'undefined', 'sight_wards', 'blue_trinkets']
         placed_cols = [col + '_placed' for col in ward_cols]
         killed_cols = [col + '_killed' for col in ward_cols]
 
@@ -323,10 +323,11 @@ def timeline_relevant_stats_to_dataframe(timeline):
                 [0, 1], as_index=False).count()
             df_placed.rename(columns={0: 'participant_id', 1: 'ward_type', 2: 'count'}, inplace=True)
             df_placed.set_index('participant_id', inplace=True)
-            yt_p, cw_p, un_p, sw_p = df_placed.loc[df_placed['ward_type'] == 'YELLOW_TRINKET'], df_placed.loc[
+            yt_p, cw_p, un_p, sw_p, bt_p = df_placed.loc[df_placed['ward_type'] == 'YELLOW_TRINKET'], df_placed.loc[
                 df_placed['ward_type'] == 'CONTROL_WARD'], df_placed.loc[df_placed['ward_type'] == 'UNDEFINED'], \
-                df_placed.loc[df_placed['ward_type'] == 'YELLOW_TRINKET']
-            df1 = pd.concat([yt_p, cw_p, un_p, sw_p], axis=1).drop('ward_type', axis=1)
+                df_placed.loc[df_placed['ward_type'] == 'SIGHT_WARD'], \
+                df_placed.loc[df_placed['ward_type'] == 'BLUE_TRINKET']
+            df1 = pd.concat([yt_p, cw_p, un_p, sw_p, bt_p], axis=1).drop('ward_type', axis=1)
             df1.columns = placed_cols
             df1.reset_index(inplace=True)
             df1 = df1.loc[df1.participant_id != 0]
@@ -339,10 +340,11 @@ def timeline_relevant_stats_to_dataframe(timeline):
                 [0, 1], as_index=False).count()
             df_killed.rename(columns={0: 'participant_id', 1: 'ward_type', 2: 'count'}, inplace=True)
             df_killed.set_index('participant_id', inplace=True)
-            yt_k, cw_k, un_k, sw_k = df_killed.loc[df_killed['ward_type'] == 'YELLOW_TRINKET'], df_killed.loc[
+            yt_k, cw_k, un_k, sw_k, bt_k = df_killed.loc[df_killed['ward_type'] == 'YELLOW_TRINKET'], df_killed.loc[
                 df_killed['ward_type'] == 'CONTROL_WARD'], df_killed.loc[df_killed['ward_type'] == 'UNDEFINED'],\
-                df_killed.loc[df_killed['ward_type'] == 'YELLOW_TRINKET']
-            df2 = pd.concat([yt_k, cw_k, un_k, sw_k], axis=1).drop('ward_type', axis=1)
+                df_killed.loc[df_killed['ward_type'] == 'SIGHT_WARD'], \
+                df_killed.loc[df_killed['ward_type'] == 'BLUE_TRINKET']
+            df2 = pd.concat([yt_k, cw_k, un_k, sw_k, bt_k], axis=1).drop('ward_type', axis=1)
             df2.columns = killed_cols
             df2.reset_index(inplace=True)
             df2 = df2.loc[df2.participant_id != 0]
@@ -361,7 +363,7 @@ def timeline_relevant_stats_to_dataframe(timeline):
     stats = timeline_participant_stats_to_dataframe(timeline)
     ps = [stats.loc[stats.participantId == p_id] for p_id in range(1, 11)]
     df_result = pd.concat([pd.DataFrame(timeto_stats_from_participant(p), index=(i,)) for i, p in enumerate(ps)])
-    wards = get_wards_placed(timeline)
+    wards = get_wards_placed_killed(timeline)
     return pd.concat([df_result, wards], axis=1)
 
 
