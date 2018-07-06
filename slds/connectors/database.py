@@ -12,11 +12,10 @@ from converters.data2files import get_runes_reforged_json
 from converters.data2frames import game_to_dataframe as g2df
 from sqlalchemy import create_engine
 from datetime import datetime as dt, timedelta
-import pickle
-from config.constants import LEAGUES_DATA_DICT, SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
+from config.constants import SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
     API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, \
-    TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXCEL_EXPORT_PATH_MERGED, EXPORTS_DIR, EXCEL_EXPORT_PATH, \
-    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT
+    TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXPORTS_DIR, \
+    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH_MERGED
 
 
 class DataBase:
@@ -31,6 +30,7 @@ class DataBase:
         self.mongo_slo_tl_col = self.mongo_cnx.slds.slo_tl
         self.mongo_static_data = self.mongo_cnx.slds.static_data
         self.sql_leagues_cnx = pymysql.connect(**SQL_LEAGUES_CONN)
+        self.sql_leagues_cnx.set_charset('utf8')
 
     def get_old_and_new_game_ids(self, **kwargs):
         if self.league == 'SOLOQ':
@@ -316,7 +316,7 @@ def parse_args(args):
             final_df = concatenated_df
 
             # Merge Solo Q players info with data
-            if args.merge_soloq and league == SOLOQ:
+            if league == SOLOQ:
                 engine = create_engine(SQL_LEAGUES_ENGINE)
                 cnx = engine.connect()
                 player_info_df = pd.read_sql_table(con=cnx, table_name='soloq')
@@ -326,11 +326,6 @@ def parse_args(args):
 
                 final_df.to_excel(LEAGUES_DATA_DICT[SOLOQ][EXCEL_EXPORT_PATH_MERGED])
                 print("\tGames merged and exported.")
-                return
-            with open('data.pickle', 'wb') as f:
-                # Pickle the 'data' dictionary using the highest protocol available.
-                pickle.dump(final_df, f, pickle.HIGHEST_PROTOCOL)
-            final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
 
     finally:
         db.close_connections()

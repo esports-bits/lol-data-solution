@@ -358,7 +358,7 @@ def timeline_relevant_stats_to_dataframe(timeline):
         elif killed_ward_events:
             return df2
         else:
-            return None
+            return pd.DataFrame()
 
     stats = timeline_participant_stats_to_dataframe(timeline)
     ps = [stats.loc[stats.participantId == p_id] for p_id in range(1, 11)]
