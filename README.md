@@ -21,7 +21,7 @@ And so on and so forth.
 The DB is also used for storing the static data of the game. This data relates the identifiers of the items, champions, runes, etc. with their names, descriptions and whatever. The raw data we store in the this DB lacks of this information, so we need to merge it before generating any dataset.
 
 ### Maria DB
-[WIP]
+In this case, the SQL DB is used to store all the relevant information of the players, teams and competitions we mess up with. Basically what is needed is a place to have all the relations between players teams and competitions because the Riot API doesn' have that. To have that context helps a lot when analysing data.
 
 ## Official competitions
 Manage data from competitions such as LCS EU or Superliga Orange and export the statistics. [WIP]
