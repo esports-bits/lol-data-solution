@@ -1,0 +1,596 @@
+</!DOCTYPE html>
+<html>
+<head>
+	  <meta charset="utf-8">
+	  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+	  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<title> MAD Lions LoL App </title>
+
+		<!-- =============== BOOTSTRAP STYLESHEET ================= -->
+    <link rel="stylesheet" href="CSS/bootstrap.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="CSS/open-iconic.css" />
+    <link href="CSS/open-iconic-bootstrap.css" rel="stylesheet">
+
+    <!-- ====================================================== -->
+<link href="https://fonts.googleapis.com/css?family=Montserrat: 500" rel="stylesheet">
+
+    <!-- =================== STYLESHEET ======================= -->
+		<link rel="stylesheet" type="text/css" href="CSS/style.css">
+    
+    <!-- ====================================================== -->
+    <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+
+</head>
+
+<body  class="background">
+
+
+<div id='cssmenu'>
+<ul>
+   <li><a href='index.html'><span>SoloQ</span></a></li>
+   <li><a href='competencias.html'><span>Competiciones Oficiales</span></a></li>
+   <li class='last'><a href='#'><span>Scrims</span></a></li>
+</ul>
+</div>
+
+<!-- ======================================================== -->
+<!-- =================== MODALS ============================= -->
+<!-- ======================================================== -->
+
+  <!-- =================== MODAL COMPETENCIAS ============================= -->
+
+<!-- The Modal -->
+                <div id="modalCompetencias" class="modal">
+                  <!-- Modal content -->
+                  <div class="modal-content ">
+                    <span class="close-btn-modal" id="cerrarCompetencia">&times;</span>
+                    <div class="container-fluid  py-3">
+                      <div class="row">
+                        <div class="col-md-10 mx-auto">
+                          <div class=" card-body">
+                            <h3 class="text-center mb-4">Agregar Competición</h3>
+                            <fieldset>
+                              <div class="form-group">
+                                <a>Nombre de la Competención</a>
+                                <input class="form-control input-lg" placeholder="Nombre de la Competición" name="nombre" type="text">
+                              </div>
+                              <div class="form-group">
+                                <a>Nombre de la Competición Abreviado</a>
+                                <input class="form-control input-lg" placeholder="Nombre de la Competición" name="nombre_invocador" value="" type="text">
+                              </div>
+                              <input class="btn btn-lg btn-secondary btn-block" value="Agregar Competición" type="submit" id="competenciaNueva">
+                            </fieldset>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div> 
+
+  <!-- =================== MODAL EQUIPOS ================================== -->
+<!-- The Modal -->
+                <div id="modalEquipos" class="modal">
+                  <!-- Modal content -->
+                  <div class="modal-content ">
+                    <span class="close-btn-modal" id="cerrarEquipo">&times;</span>
+                    <div class="container-fluid py-3">
+                      <div class="row">
+                        <div class="col-md-10 mx-auto">
+                          <div class="card-body">
+                            <h3 class="text-center mb-4">Agregar Equipos</h3>
+                            <fieldset>
+                              <div class="form-group">
+                                <a>Nombre del Equipo</a>
+                                <input class="form-control input-lg" placeholder="Nombre del Equipo" name="nombre_equipo" value="" type="text">
+                              </div>
+                              <div class="form-group">
+                                <a>Nombre del Equipo Abreviado</a>
+                                <input class="form-control input-lg" placeholder="Nombre del Equipo" name="nombre_equipo" value="" type="text">
+                              </div>
+                              <div class="form-group">
+                                <a>Nombre de la Competición Abreviado</a>
+                                <input class="form-control input-lg" placeholder="Nombre de la Competición" name="nombre_equipo" value="" type="text">
+                              </div>
+                              <input class="btn btn-lg btn-secondary btn-block" value="Agregar Equipo" type="submit" id="equipoNuevo">
+                            </fieldset>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div> 
+
+
+  <!-- =================== MODAL JUGADORES ================================ -->
+                <!-- The Modal -->
+                <div id="modalJugadores" class="modal">
+                  <!-- Modal content -->
+                  <div class="modal-content ">
+                    <span class="close-btn-modal" id="cerrarJugador">&times;</span>
+                    <div class="container-fluid py-3">
+                      <div class="row">
+                        <div class="col-md-10 mx-auto">
+                          <div class=" card-body">
+                            <h3 class="text-center mb-4">Agregar Jugador</h3>
+                            <fieldset>
+                              <div class="form-group">
+                                <a>Nombre del Jugador</a>
+                                <input class="form-control input-lg" placeholder="Nombre del Jugador" name="nombre" type="text">
+                              </div>
+                              <div class="form-group">
+                                <a>Nombre de Invocador</a>
+                                <input class="form-control input-lg" placeholder="Nombre de Invocador" name="nombre_invocador" value="" type="text">
+                              </div>
+                              <div class="form-group">
+                                <a>Región</a>
+                                <select class="form-control input-lg">
+                                <option selected>Región</option>
+                                <option select="">BR</option>
+                                <option select="">CN</option>
+                                <option select="">EUNE</option>
+                                <option select="">EUW</option>
+                                <option select="">JP</option>
+                                <option select="">KR</option>
+                                <option select="">LAN</option>
+                                <option select="">LAS</option>
+                                <option select="">NA</option>
+                                <option select="">OCE</option>
+                                <option select="">TR</option>
+                                <option select="">RU</option>
+                                <option select="">PBE</option>
+                                </select>
+                              </div>
+                              <div class="form-group">
+                                <a>Posición</a>
+                                <select class="form-control  selectpicker" name="posicion" id="posicion">
+                                <option selected>Posición</option>
+                                <option select="">TOP</option>
+                                <option select="">JUNG</option>
+                                <option select="">MID</option>
+                                <option select="">ADC</option>
+                                <option select="">SUPPORT</option>                             
+                                </select>
+                              </div>
+                              <div class="form-group">
+                                <a>Nombre del Equipo</a>
+                                <input class="form-control input-lg" placeholder="Nombre del Equipo" name="nombre_equipo" value="" type="text">
+                              </div>
+                              <div class="form-group">
+                                <a>Titularidad</a>
+                                <div class="form-check">
+                                  <input class="form-check-input" type="radio" name="titularidad" id="titularidad1" value="option1" checked>
+                                  <label class="form-check-label" for="titularidad1">
+                                    True
+                                  </label>
+                                </div>
+                                <div class="form-check">
+                                  <input class="form-check-input" type="radio" name="titularidad" id="titularidad2" value="option2">
+                                  <label class="form-check-label" for="titularidad2">
+                                    False
+                                  </label>
+                                </div>
+                              </div>
+                              <div class="form-group">
+                                <a>Tipo de Cuenta</a>
+                                <div class="form-check">
+                                  <input class="form-check-input" type="radio" name="tipoCuenta" id="tipoCuenta1" value="option1" checked>
+                                  <label class="form-check-label" for="tipoCuenta1">
+                                    Principal
+                                  </label>
+                                </div>
+                                <div class="form-check">
+                                  <input class="form-check-input" type="radio" name="tipoCuenta" id="tipoCuenta2" value="option2">
+                                  <label class="form-check-label" for="tipoCuenta2">
+                                    Smurf
+                                  </label>
+                                </div>
+                              </div>
+                              <input class="btn btn-lg btn-secondary btn-block" value="Agregar Jugador" type="submit" id="jugadorNuevo">
+                            </fieldset>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div> 
+<section class="container-fluid" >
+
+<div id="logo" > <img src="IMG/1.png" style="width: 35%;" ></div>
+<!-- ======================================================== -->
+<!-- =================== COMPETENCIAS ======================= -->
+<!-- ======================================================== -->
+
+  <span class="close-competencias" id="close-competencias"><img src="IMG/chevron-left-3x.png"></span> 
+    <div class="container" >
+  
+      <div id="competencias" class=" row-padding shadow p-2 mb-1 bg-dark">    
+        <div class="row">
+            <div class="col-lg-12  title" >
+                <h3 >Competiciones  <br></br></h3>
+                
+            </div>
+        </div>
+        <div id="tabla-competencias">
+        
+          <div class="row" >
+            <div class="col-lg-4 col-lg-offset-4">
+              <input type="text" id="inputCompetencias" value="" class="form-control search-padding" placeholder="Buscar competición">
+              <div class="container add-button-competencias" >
+                <button class="btn btn-secondary " type="button" id="btnCompetencias"   >        
+                Agregar nueva competencia
+                </button>     
+              </div>           
+            </div>
+          </div>
+          <div class="row row-padding" >
+            <div class="col-lg-10 table pre-scrollable ">
+                <table class="tables-padding " cellpadding="0" cellspacing="0" id="tablaCompetencias">
+                    <thead class="tbl-header ">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Abreviación</th>
+                        </tr>
+                    </thead>
+                    <tbody class="tbl-content " >
+                      
+                      <div >
+                        <ul>
+                        <tr>
+                            <td>European League Championship Series</td>
+                            <td>EULCS</td>
+                        </tr>
+                        <tr>
+                            <td>North America League Championship Series</td>
+                            <td>NALCS</td>
+                        </tr>
+                        <tr>
+                            <td>Liga Latinoamericana Norte</td>
+                            <td>LLN</td>
+                        </tr>
+                        <tr>
+                            <td>Copa Latinoamerica Sur</td>
+                            <td>CLS</td>
+                        </tr>
+                        <tr>
+                            <td>League of Legends Pro League</td>
+                            <td>LPL</td>
+                        </tr>
+                        <tr>
+                            <td>League of Legends Championship Korea</td>
+                            <td>LCK</td>
+                        </tr>
+                        <tr>
+                            <td>Supe Liga Orange</td>
+                            <td>SLO</td>
+                        </tr>
+                        <tr>
+                            <td>The Cloud League</td>
+                            <td>TCL</td>
+                        </tr>    
+                      </ul>
+                    </div>
+                  </tbody>
+                </table>
+                <hr>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  
+
+
+<!-- ===================================================== -->
+<!-- ====================  EQUIPOS  ====================== -->
+<!-- ===================================================== -->
+
+  
+  <span class="close-equipos" id="close-equipos"><img src="IMG/chevron-left-3x.png"></span> 
+    <div class="container" >
+  
+      <div id="equipos" class="row-padding shadow p-2 mb-1 bg-dark">    
+        <div class="row">
+            <div class="col-lg-12 title" >
+              
+              <h3  > Equipos<br></br></h3>                
+              
+            </div>
+        </div>
+        <div id="tabla-equipos">        
+          <div class="row" >
+            <div class="col-lg-4 col-lg-offset-4">
+              <input  type="text" id="inputEquipos" value="" class="form-control search-padding" placeholder="Buscar Equipo">
+              <div class="container add-button-equipos" >
+                <button class="btn btn-secondary " type="button" id="btnEquipos"   >        
+                Agregar nuevo Equipo
+                </button>   
+              </div>           
+            </div>
+          </div>
+          <div class="row row-padding" >
+            <div class="col-lg-10 table pre-scrollable ">
+                <table class="tables-padding" cellpadding="0" cellspacing="0" id="tablaEquipos">
+                    <thead class="tbl-header">
+                        <tr>
+                            <th></th>
+                            <th>Nombre</th>
+                            <th>Abreviación</th>
+                            <th>Competición</th>
+                        </tr>
+                    </thead>
+                    <tbody class="tbl-content " >
+                      
+                      <div >
+                        <ul>
+                        <tr>
+                            <td><img src="IMG/teams/VGIA.png" style="width: 30%; "></td>
+                            <td>Vodafone Giants SLO </td>
+                            <td>VGIAS</td>
+                            <td>SLO</td>
+                        </tr>
+                        <tr>
+                            <td><img src="IMG/teams/MAD.png" style="width: 30%; "></td> 
+                            <td>MAD Lions E.C.</td>
+                            <td>MAD </td>
+                            <td>SLO</td>
+                        </tr>
+                        <tr>
+                            <td><img src="IMG/teams/DRG.png" style="width: 30%; "></td>
+                            <td>Team Dragons E.C.</td>
+                            <td>DRG</td>
+                            <td>SLO</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>Team Solo Mid</td>
+                            <td>TSM</td>
+                            <td>NALCS</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>SKT T1 Telecom</td>
+                            <td>SKT</td>
+                            <td>LCK</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>FANATIC</td>
+                            <td>FNC</td>
+                            <td>EULCS</td>
+                        </tr>                          
+                      </ul>
+                    </div>
+                  </tbody>
+                </table>
+                <hr>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  
+
+
+<!-- ======================================================== -->
+<!-- ====================  JUGADORES  ======================= -->
+<!-- ======================================================== -->
+
+
+  
+  <span class="close-jugadores" id="close-jugadores"><img src="IMG/chevron-left-3x.png"></span>
+    <div class="container " >
+    
+      <div id="jugadores" class="row-padding shadow p-2 mb-1 bg-dark">    
+        <div class="row">
+            <div class="col-lg-12  title" >
+                <h3> Jugadores <br></br></h3>
+                
+            </div>
+        </div>
+        <div id="tabla-jugadores">
+        
+          <div class="row" >
+            <div class="col-lg-4 col-lg-offset-4">
+              <input type="text" id="inputJugadores" value="" class="form-control search-padding-jugadores" placeholder="Buscar Jugador">
+              <div class="container add-button-jugadores" >
+                <!-- Trigger/Open The Modal -->
+                <button class="btn btn-secondary " type="button" id="btnJugadores"  >       
+                Agregar nuevo jugador
+                </button>  
+                
+              </div>           
+            </div>
+          </div>
+          <div class="row row-padding" >
+            <div class="col-lg-10 table pre-scrollable ">
+                <table class="tables-padding" cellpadding="0" cellspacing="0" id="tablaJugadores">
+                    <thead class="tbl-header">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Nombre de Invocador</th>
+                            <th>Region</th>
+                            <th>Posicion</th>
+                            <th>Equipo</th>
+                            <th>Titularidad</th>
+                            <th>Tipo de cuenta</th>
+                        </tr>
+                    </thead>
+                    <tbody class="tbl-content" >
+                      
+                      <div >
+                        <ul>
+                        <tr>
+                            <td>Nemesis</td>
+                            <td>MAD Nemesis</td>
+                            <td>EUW</td>
+                            <td ><img src="IMG/role_lane_icons/MID.png" style="width: 30%; margin-left: 15%;"></td>
+                            <td>MAD Lions E.C.</td>
+                            <td>True</td>
+                            <td>Principal</td>
+                        </tr>
+                        <tr>
+                            <td>Crownshot</td>
+                            <td>MAD Crownshot</td>
+                            <td>EUW</td>
+                            <td><img src="IMG/role_lane_icons/ADC.png" style="width: 30%; margin-left: 15%;"></td>
+                            <td>MAD Lions E.C.</td>
+                            <td>True</td>
+                            <td>Principal</td>
+                        </tr>
+                        <tr>
+                            <td>Falco</td>
+                            <td>MAD Falc0</td>
+                            <td>EUW</td>
+                            <td><img src="IMG/role_lane_icons/SUPPORT.png" style="width: 30%; margin-left: 15%;"></td>
+                            <td>MAD Lions E.C.</td>
+                            <td>True</td>
+                            <td>Principal</td>
+                        </tr>
+                        <tr>
+                            <td>Mithy</td>
+                            <td>Mithypote</td>
+                            <td>EUW</td>
+                            <td><img src="IMG/role_lane_icons/SUPPORT.png" style="width: 30%; margin-left: 15%;"></td>
+                            <td>Team Solo Mid</td>
+                            <td>True</td>
+                            <td>Smurf</td>
+                        </tr>
+                        <tr>
+                            <td>Faker</td>
+                            <td>SKT Faker</td>
+                            <td>KR</td>
+                            <td><img src="IMG/role_lane_icons/MID.png" style="width: 30%; margin-left: 15%;"></td>
+                            <td>SKT T1 Telecom</td>
+                            <td>True</td>
+                            <td>Principal</td>
+                        </tr>
+                      </ul>
+                    </div>
+                  </tbody>
+                </table>
+                <hr>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+<div id="wrap">
+  <div class="line-reveal" id="line-a">
+    <div class="overlay"></div>
+    <div class="line"></div>
+  </div>
+  <div class="line-reveal" id="line-b">
+    <div class="overlay"></div>
+    <div class="line"></div>
+  </div>
+
+</div>
+
+</section>
+
+<!-- =============================================================== -->
+<!-- ===================  ANIMACIONES JQUERY ======================= -->
+<!-- =============================================================== -->
+<script >
+  
+  $(document).ready(function(){
+    
+      //animación de aberturas competencias
+      $("#competencias").click(function(){
+        
+        $(this).animate({ opacity:0.85, height:"465px",width:"785px"}, );
+        
+        $("#tabla-competencias").delay(1000).fadeIn();
+        $("#close-competencias").delay(1000).fadeIn();
+        $("#equipos").delay(0).fadeOut();
+        $("#jugadores").delay(0).fadeOut();        
+       })
+      //animación de abertura equipos
+      $("#equipos").click(function(){
+        
+        $(this).animate({ opacity:0.85, height:"465px",width:"885px"}, );
+      
+        $("#tabla-equipos").delay(1000).fadeIn();
+        $("#close-equipos").delay(1000).fadeIn();
+        $("#competencias").delay(0).fadeOut();
+        $("#jugadores").delay(0).fadeOut();
+       })
+      //animación de abertura jugadores
+      $("#jugadores").click(function(){
+        
+        $(this).animate({ opacity:0.85, height:"565px",width:"1015px"}, );        
+
+        $("#tabla-jugadores").delay(1000).fadeIn();
+        $("#close-jugadores").delay(1000).fadeIn();
+        $("#equipos").delay(0).fadeOut();
+        $("#competencias").delay(0).fadeOut();
+       })
+
+      //animación de cierre de competencias
+      $( "#close-competencias" ).click(function() {
+        $(".title").fadeOut();
+        $( "#competencias" ).animate({
+          opacity:1 ,
+          width: "205px",
+          height: "65px",
+          });        
+        $("#equipos").delay(1000).fadeIn();
+        $("#jugadores").delay(1000).fadeIn();
+        $("#tabla-competencias").delay(0).fadeOut();
+        $("#close-competencias").delay(0).fadeOut();
+        $(".title").delay(250).fadeIn();
+        
+      });
+
+      //animación de cierre de equipos
+      $( "#close-equipos" ).click(function() {
+        $(".title").fadeOut();
+        $( "#equipos" ).animate({
+          opacity:1,
+          width: "205px",
+          height: "65px",
+        });
+
+        
+        $("#competencias").delay(1000).fadeIn();
+        $("#jugadores").delay(1000).fadeIn();
+        $("#tabla-equipos").delay(0).fadeOut();
+        $("#close-equipos").delay(0).fadeOut();
+        $(".title").delay(250).fadeIn();
+      
+      });
+
+      //animación de cierre de jugadores
+      $( "#close-jugadores" ).click(function() {
+        $(".title").fadeOut();
+        $( "#jugadores" ).animate({
+          opacity:1,
+          width: "205px",
+          height: "65px",
+        });
+        $("#equipos").delay(1000).fadeIn();
+        $("#competencias").delay(1000).fadeIn();
+        $("#tabla-jugadores").delay(0).fadeOut();
+        $("#close-jugadores").delay(0).fadeOut();
+        $(".title").delay(250).fadeIn();
+      });
+                      
+  })
+
+</script>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script type="text/javascript" src="JS/lions.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-beta.2/js/bootstrap.bundle.min.js"></script>
+<script src="jquery-3.3.1.min.js"></script>
+
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="//rawgithub.com/stidges/jquery-searchable/master/dist/jquery.searchable-1.0.0.min.js"></script>
+</body>
+</html> 	
