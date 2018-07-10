@@ -15,7 +15,7 @@ from datetime import datetime as dt, timedelta
 from config.constants import SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
     API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, \
     TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXPORTS_DIR, \
-    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH_MERGED
+    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH_MERGED, EXCEL_EXPORT_PATH
 
 
 class DataBase:
@@ -326,6 +326,8 @@ def parse_args(args):
 
                 final_df.to_excel(LEAGUES_DATA_DICT[SOLOQ][EXCEL_EXPORT_PATH_MERGED])
                 print("\tGames merged and exported.")
+                return
+            final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
 
     finally:
         db.close_connections()
