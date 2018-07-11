@@ -42,6 +42,7 @@ def parse_args():
     databases.add_argument('-C', '--competition', help='Select the competition. {download and export}')
     databases.add_argument('-s', '--split', help='Select the split [spring, summer]. {leagues data export only]')
     databases.add_argument('-S', '--season', help='Select the season [int]. {leagues data export only]')
+    databases.add_argument('-R', '--region_filter', help='Select the region to download and export the data.')
 
     return parser.parse_args()
 
