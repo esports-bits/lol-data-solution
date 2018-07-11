@@ -79,7 +79,20 @@ class DataBase:
                 query = 'SELECT DISTINCT account_id FROM soloq WHERE competition_abbv IN {}' \
                     .format(tuple(competitions))
             else:
-                print('\tNo names selected. Check help for more information.')
+                print('\tNo competitions selected. Check help for more information.')
+                return
+        elif kwargs['region_filter'] is not None:
+            print('\tLooking for account ids players competing in {}.'.format(kwargs['region_filter'].upper()
+                                                                              .replace(',', ' and ')))
+            regions = [REGIONS[region.upper()] for region in kwargs['region_filter'].split(',')]
+            if len(regions) == 1:
+                query = 'SELECT DISTINCT account_id FROM soloq WHERE region = {}' \
+                    .format('\"' + str(regions[0]) + '\"')
+            elif len(regions) > 1:
+                query = 'SELECT DISTINCT account_id FROM soloq WHERE region IN {}' \
+                    .format(tuple(regions))
+            else:
+                print('\tNo region selected. Check help for more information.')
                 return
         else:
             print('\tLooking for account ids of every player in the DB.')
