@@ -112,3 +112,5 @@ matches_raw_data/
 *.csv
 *.xlsx
 slds/msgbox.vbs
+*.xlsx#
+*.iml
