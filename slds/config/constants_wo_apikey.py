@@ -1,4 +1,5 @@
-import numpy as np
+from numpy import int64
+import re
 
 API_KEY = ""
 
@@ -16,21 +17,21 @@ LCK_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'lck_spring_S8.csv'
 SCRIMS_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'scrims.csv'
 SOLOQ_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'soloq.csv'
 SLO_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                 '{ID of the document}' \
-                                 '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
-                                 'sheet={Sheet name}'
+                                 '{doc_id}' \
+                                 '/gviz/tq?tqx=out:csv&' \
+                                 'sheet={sheet}'
 LCK_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                 '{ID of the document}' \
-                                 '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
-                                 'sheet={Sheet name}'
+                                 '{doc_id}' \
+                                 '/gviz/tq?tqx=out:csv&' \
+                                 'sheet={sheet}'
 SCRIMS_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                    '{ID of the document}' \
-                                    '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
-                                    'sheet={Sheet name}'
+                                    '{doc_id}' \
+                                    '/gviz/tq?tqx=out:csv&' \
+                                    'sheet={sheet}'
 SOLOQ_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                   '{ID of the document}' \
-                                   '/gviz/tq?tqx=out:{Format (csv, json, ...}&' \
-                                   'sheet={Sheet name}'
+                                   '{doc_id}' \
+                                   '/gviz/tq?tqx=out:csv&' \
+                                   'sheet={sheet}'
 SLO_DATASET_CSV = EXPORTS_DIR + 'slo_dataset.csv'
 SLO_DATASET_XLSX = EXPORTS_DIR + 'slo_dataset.xlsx'
 LCK_DATASET_CSV = EXPORTS_DIR + 'lck_dataset.csv'
@@ -44,7 +45,7 @@ DATA_DRAGON_URL = 'http://ddragon.leagueoflegends.com/cdn/{version}/data/{langua
 DD_LANGUAGE = 'en_US'
 DD_RUNES_REFORGED = 'runesReforged.json'
 
-CUSTOM_PARTICIPANT_COLS = ['p_1', 'p_2', 'p_3', 'p_4', 'p_5', 'p_6', 'p_7', 'p_8', 'p_9', 'p_10']
+CUSTOM_PARTICIPANT_COLS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10']
 STANDARD_POSITIONS = ['TOP', 'JUNG', 'MID', 'ADC', 'SUPP', 'TOP', 'JUNG', 'MID', 'ADC', 'SUPP']
 SCRIMS_POSITIONS_COLS = ['pos_1', 'pos_2', 'pos_3', 'pos_4', 'pos_5', 'pos_6', 'pos_7', 'pos_8', 'pos_9', 'pos_10']
 STATIC_DATA_RELEVANT_COLS = ['id', 'name']
@@ -79,16 +80,16 @@ LEAGUES_DATA_DICT = {
         RAW_DATA_PATH: SLO_GAMES_DIR,
         OFFICIAL_LEAGUE: False,
         DTYPES: {'datetime': str, 'series_id': str, 'week': int, 'event': str, 'game': int,
-                 'game_id': np.int64, 'blue': str, 'red': str, 'blue_win': int, 'p_1': str,
+                 'game_id': int64, 'blue': str, 'red': str, 'blue_win': int, 'p_1': str,
                  'p_2': str, 'p_3': str, 'p_4': str, 'p_5': str, 'p_6': str, 'p_7': str,
                  'p_8': str, 'p_9': str, 'p_10': str},
-        CSV_EXPORT_PATH: SLO_DATASET_CSV,
-        EXCEL_EXPORT_PATH: SLO_DATASET_XLSX},
+        CSV_EXPORT_PATH: EXPORTS_DIR + SLO_DATASET_CSV,
+        EXCEL_EXPORT_PATH: EXPORTS_DIR + SLO_DATASET_XLSX},
     SCRIMS: {
         IDS_FILE_PATH: SCRIMS_MATCHES_FILE_PATH,
         RAW_DATA_PATH: SCRIMS_GAMES_DIR,
         OFFICIAL_LEAGUE: False,
-        DTYPES: {'date': str, 'enemy': str, 'game_id': np.int64, 'match_history': str,
+        DTYPES: {'date': str, 'enemy': str, 'game_id': int64, 'match_history': str,
                  'blue': str, 'red': str, 'pos_1': str, 'pos_2': str, 'pos_3': str, 'pos_4': str,
                  'pos_5': str,'pos_6': str, 'pos_7': str, 'pos_8': str, 'pos_9': str, 'pos_10': str,
                  'p_1': str, 'p_2': str, 'p_3': str, 'p_4': str, 'p_5': str, 'p_6': str,'p_7': str,
@@ -106,4 +107,48 @@ LEAGUES_DATA_DICT = {
         EXCEL_EXPORT_PATH_MERGED: EXPORTS_DIR + 'soloq_dataset_merged.xlsx'
     }
 }
+
+FS = 'FS'
+DB = 'DB'
+CONNECTORS_DATA_DICT = {
+    FS: {},
+    DB: {}
+}
 SUPPORTED_LEAGUES = list(LEAGUES_DATA_DICT.keys())
+SUPPORTED_CONNECTORS = list(CONNECTORS_DATA_DICT.keys())
+
+EXPORTS_DB_NAME = 'exports'
+LEAGUES_DB_NAME = 'leagues_info'
+SQL_EXPORTS_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': EXPORTS_DB_NAME}
+SQL_LEAGUES_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': LEAGUES_DB_NAME}
+SQL_LEAGUES_ENGINE = 'mysql+pymysql://{user}:{password}@localhost/{db}'.format(user='', password='', db=LEAGUES_DB_NAME)
+SQL_EXPORTS_ENGINE = 'mysql+pymysql://{user}:{password}@localhost/{db}'.format(user='', password='', db=EXPORTS_DB_NAME)
+MONGODB_CREDENTIALS = 'mongodb+srv://<user>:<password>@cluster0-kbg0m.mongodb.net/test?retryWrites=true'
+
+REGIONS = {
+    'BR': 'BR1',
+    'EUNE': 'EUNE1',
+    'EUW': 'EUW1',
+    'JP': 'JP1',
+    'KR': 'KR',
+    'LAN': 'LA1',
+    'LAS': 'LA2',
+    'NA': ['NA1', 'NA'],
+    'OCE': 'OC1',
+    'TR': 'TR1',
+    'RU': 'RU',
+    'PBE': 'PBE1'
+}
+
+DEFAULT_REGION = REGIONS['EUW']
+
+TOURNAMENT_GAME_ENDPOINT = 'https://acs.leagueoflegends.com/v1/stats/game/{tr}/{id}?gameHash={hash}'
+TOURNAMENT_TL_ENDPOINT = 'https://acs.leagueoflegends.com/v1/stats/game/{tr}/{id}/timeline?gameHash={hash}'
+
+PATCH_PATTERN = re.compile(r'^[0-9]{1,2}\.[0-9]{1,2}(\.[0-9]*){0,2}$')
+
+NORMAL_DRAFT_QUEUE_ID = 400
+SOLOQ_QUEUE_ID = 420
+NORMAL_BLIND_QUEUE_ID = 430
+FLEX_QUEUE_ID = 440
+RIFT_GAMES_QUEUES = [NORMAL_DRAFT_QUEUE_ID, SOLOQ_QUEUE_ID, NORMAL_BLIND_QUEUE_ID, FLEX_QUEUE_ID]

@@ -1,5 +1,8 @@
+pymysql
+pymongo
 pandas
 tqdm
 riotwatcher
 requests
 numpy
+dnspython
