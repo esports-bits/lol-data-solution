@@ -186,14 +186,18 @@ class FileSystem:
 
     def save_static_data_files(self):
         versions = self.rw.static_data.versions(region=REGIONS[self.region])
-        champs = self.rw.static_data.champions(region=REGIONS[self.region], version=versions[0])
-        items = self.rw.static_data.items(region=REGIONS[self.region], version=versions[0])
-        summs = self.rw.static_data.summoner_spells(region=REGIONS[self.region], version=versions[0])
-        save_runes_reforged_json()
         write_json(versions, STATIC_DATA_DIR, file_name='versions')
+
+        champs = self.rw.static_data.champions(region=REGIONS[self.region], version=versions[0])
         write_json(champs, STATIC_DATA_DIR, file_name='champions')
+
+        items = self.rw.static_data.items(region=REGIONS[self.region], version=versions[0])
         write_json(items, STATIC_DATA_DIR, file_name='items')
+
+        summs = self.rw.static_data.summoner_spells(region=REGIONS[self.region], version=versions[0])
         write_json(summs, STATIC_DATA_DIR, file_name='summoners')
+
+        save_runes_reforged_json()
 
     def __get_soloq_game_ids(self, acc_ids, **kwargs):
         if 'n_games' in kwargs:
