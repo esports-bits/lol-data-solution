@@ -108,7 +108,7 @@ SQL_EXPORTS_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database':
 SQL_LEAGUES_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': LEAGUES_DB_NAME}
 SQL_LEAGUES_ENGINE = 'mysql+pymysql://{user}:{password}@localhost/{db}'.format(user='', password='', db=LEAGUES_DB_NAME)
 SQL_EXPORTS_ENGINE = 'mysql+pymysql://{user}:{password}@localhost/{db}'.format(user='', password='', db=EXPORTS_DB_NAME)
-MONGODB_CREDENTIALS = 'mongodb+srv://<user>:<password>@<url>'
+MONGODB_CREDENTIALS = 'mongodb+srv://{user}:{pass}@{url}'
 
 REGIONS = {
     'BR': 'BR1',
