@@ -12,26 +12,11 @@ SOLOQ_GAMES_DIR = MATCHES_RAW_DATA_DIR + 'soloq/'
 SCRIMS_GAMES_DIR = MATCHES_RAW_DATA_DIR + 'scrims/'
 EXPORTS_DIR = WORK_DIR + 'exports/'
 STATIC_DATA_DIR = WORK_DIR + 'static_data/'
+
 SLO_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'slo_spring_S8.csv'
 LCK_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'lck_spring_S8.csv'
 SCRIMS_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'scrims.csv'
 SOLOQ_MATCHES_FILE_PATH = LEAGUES_DATA_DIR + 'soloq.csv'
-SLO_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                 '{doc_id}' \
-                                 '/gviz/tq?tqx=out:csv&' \
-                                 'sheet={sheet}'
-LCK_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                 '{doc_id}' \
-                                 '/gviz/tq?tqx=out:csv&' \
-                                 'sheet={sheet}'
-SCRIMS_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                    '{doc_id}' \
-                                    '/gviz/tq?tqx=out:csv&' \
-                                    'sheet={sheet}'
-SOLOQ_MATCHES_FILE_DOWNLOAD_LINK = 'https://docs.google.com/spreadsheets/d/' \
-                                   '{doc_id}' \
-                                   '/gviz/tq?tqx=out:csv&' \
-                                   'sheet={sheet}'
 SLO_DATASET_CSV = EXPORTS_DIR + 'slo_dataset.csv'
 SLO_DATASET_XLSX = EXPORTS_DIR + 'slo_dataset.xlsx'
 LCK_DATASET_CSV = EXPORTS_DIR + 'lck_dataset.csv'
@@ -123,7 +108,7 @@ SQL_EXPORTS_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database':
 SQL_LEAGUES_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': LEAGUES_DB_NAME}
 SQL_LEAGUES_ENGINE = 'mysql+pymysql://{user}:{password}@localhost/{db}'.format(user='', password='', db=LEAGUES_DB_NAME)
 SQL_EXPORTS_ENGINE = 'mysql+pymysql://{user}:{password}@localhost/{db}'.format(user='', password='', db=EXPORTS_DB_NAME)
-MONGODB_CREDENTIALS = 'mongodb+srv://<user>:<password>@cluster0-kbg0m.mongodb.net/test?retryWrites=true'
+MONGODB_CREDENTIALS = 'mongodb+srv://<user>:<password>@<url>'
 
 REGIONS = {
     'BR': 'BR1',
