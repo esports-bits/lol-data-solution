@@ -114,3 +114,5 @@ matches_raw_data/
 slds/msgbox.vbs
 *.xlsx#
 *.iml
+slds/tests.ipynb
+slds/db_test.ipynb
