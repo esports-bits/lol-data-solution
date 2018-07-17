@@ -109,3 +109,4 @@ slo_games/
 exports/
 leagues_data/
 matches_raw_data/
+*.iml
