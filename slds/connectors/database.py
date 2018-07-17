@@ -10,11 +10,11 @@ from tqdm import tqdm
 from requests.exceptions import HTTPError
 from converters.data2files import get_runes_reforged_json
 from converters.data2frames import game_to_dataframe as g2df
+from converters.data2frames import mongodb_players_to_dataframe
 from sqlalchemy import create_engine
 from datetime import datetime as dt, timedelta
-from config.constants import SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, \
-    API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, \
-    TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXPORTS_DIR, \
+from config.constants import SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
+    STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXPORTS_DIR, \
     RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH_MERGED, EXCEL_EXPORT_PATH
 
 
@@ -29,6 +29,9 @@ class DataBase:
         self.mongo_slo_m_col = self.mongo_cnx.slds.slo_m
         self.mongo_slo_tl_col = self.mongo_cnx.slds.slo_tl
         self.mongo_static_data = self.mongo_cnx.slds.static_data
+        self.mongo_players = self.mongo_cnx.slds.players
+        self.mongo_teams = self.mongo_cnx.slds.teams
+        self.mongo_competitions = self.mongo_cnx.slds.competitions
         self.sql_leagues_cnx = pymysql.connect(**SQL_LEAGUES_CONN)
         self.sql_leagues_cnx.set_charset('utf8')
 
@@ -277,15 +280,17 @@ class DataBase:
 
     def save_static_data_files(self):
         versions = {'versions': self.rw.static_data.versions(region=self.region), '_id': 'versions'}
-        champs = self.rw.static_data.champions(region=self.region, version=versions['versions'][0])
-        items = self.rw.static_data.items(region=self.region, version=versions['versions'][0])
-        summs = self.rw.static_data.summoner_spells(region=self.region, version=versions['versions'][0])
-        runes = {'runes': get_runes_reforged_json(), '_id': 'runes_reforged'}
-        champs['_id'], items['_id'], summs['_id'] = ['champions', 'items', 'summoner_spells']
         self.mongo_static_data.replace_one(filter={'_id': 'versions'}, replacement=versions, upsert=True)
+        champs = self.rw.static_data.champions(region=self.region, version=versions['versions'][0])
+        champs['_id'] = 'champions'
         self.mongo_static_data.replace_one(filter={'_id': 'champions'}, replacement=champs, upsert=True)
+        items = self.rw.static_data.items(region=self.region, version=versions['versions'][0])
+        items['_id'] = 'items'
         self.mongo_static_data.replace_one(filter={'_id': 'items'}, replacement=items, upsert=True)
+        summs = self.rw.static_data.summoner_spells(region=self.region, version=versions['versions'][0])
+        summs['_id'] = 'summoner_spells'
         self.mongo_static_data.replace_one(filter={'_id': 'summoner_spells'}, replacement=summs, upsert=True)
+        runes = {'runes': get_runes_reforged_json(), '_id': 'runes_reforged'}
         self.mongo_static_data.replace_one(filter={'_id': 'runes_reforged'}, replacement=runes, upsert=True)
 
 
@@ -330,12 +335,9 @@ def parse_args(args):
 
             # Merge Solo Q players info with data
             if league == SOLOQ:
-                engine = create_engine(SQL_LEAGUES_ENGINE)
-                cnx = engine.connect()
-                player_info_df = pd.read_sql_table(con=cnx, table_name='soloq')
+                player_info_df = mongodb_players_to_dataframe(db.mongo_players)
                 final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
                                           how='left')
-                cnx.close()
 
                 final_df.to_excel(LEAGUES_DATA_DICT[SOLOQ][EXCEL_EXPORT_PATH_MERGED])
                 print("\tGames merged and exported.")

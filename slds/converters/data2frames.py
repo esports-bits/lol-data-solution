@@ -390,3 +390,30 @@ def champs_to_dataframe(champs):
 def summs_to_dataframe(summs):
     return pd.DataFrame(summs['data']).T.reset_index(drop=True)[STATIC_DATA_RELEVANT_COLS]
 
+
+def mongodb_players_to_dataframe(players_collection):
+    def transform_soloq_player_data_for_dataframe(player):
+        player.pop('_id')
+        comp_info = player.pop('comp_info')
+        try:
+            player['competition_abbv'] = comp_info[0]['abbreviation']
+            player['competition_name'] = comp_info[0]['name']
+        except IndexError:
+            pass
+
+        team_info = player.pop('team_info')
+        try:
+            player['team_abbv'] = team_info[0]['abbreviation']
+            player['team_name'] = team_info[0]['name']
+        except IndexError:
+            pass
+
+        return player
+
+    cursor = players_collection.aggregate([
+        {'$lookup': {'from': "teams", 'localField': "team_abbv", 'foreignField': "abbreviation", 'as': "team_info"}},
+        {'$lookup': {'from': "competitions", 'localField': "team_info.competition", 'foreignField': "abbreviation",
+                     'as': "comp_info"}}
+    ])
+    return pd.concat(
+        [pd.DataFrame(p, index=(0,)) for p in [transform_soloq_player_data_for_dataframe(player) for player in cursor]])
