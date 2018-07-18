@@ -13,9 +13,10 @@ from converters.data2frames import game_to_dataframe as g2df
 from converters.data2frames import mongodb_players_to_dataframe
 from sqlalchemy import create_engine
 from datetime import datetime as dt, timedelta
-from config.constants import SQL_LEAGUES_CONN, MONGODB_CREDENTIALS, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
+from config.constants import SQL_LEAGUES_CONN, MONGODB_CONN, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
     STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, TOURNAMENT_GAME_ENDPOINT, SQL_LEAGUES_ENGINE, EXPORTS_DIR, \
-    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH_MERGED, EXCEL_EXPORT_PATH
+    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH_MERGED, EXCEL_EXPORT_PATH, \
+    DB_ITEMS, DB_CHANGE_TYPE
 
 
 class DataBase:
@@ -23,7 +24,7 @@ class DataBase:
         self.rw = RiotWatcher(API_KEY)
         self.region = region
         self.league = league
-        self.mongo_cnx = MongoClient(MONGODB_CREDENTIALS)
+        self.mongo_cnx = MongoClient(MONGODB_CONN)
         self.mongo_soloq_m_col = self.mongo_cnx.slds.soloq_m
         self.mongo_soloq_tl_col = self.mongo_cnx.slds.soloq_tl
         self.mongo_slo_m_col = self.mongo_cnx.slds.slo_m
@@ -292,6 +293,16 @@ class DataBase:
         self.mongo_static_data.replace_one(filter={'_id': 'summoner_spells'}, replacement=summs, upsert=True)
         runes = {'runes': get_runes_reforged_json(), '_id': 'runes_reforged'}
         self.mongo_static_data.replace_one(filter={'_id': 'runes_reforged'}, replacement=runes, upsert=True)
+
+    def modify_item_in_db(self, item_type, change_type, item):
+        if item_type.lower() in DB_ITEMS and change_type.lower() in DB_CHANGE_TYPE:
+            coll = self.mongo_cnx.slds.get_collection(item_type)
+            if change_type.lower() == 'add':
+                coll.insert_one(item)
+            elif change_type.lower() == 'edit':
+                coll.replace_one(filter={'key': item['key']}, replacement=item, upsert=True)
+            elif change_type.lower() == 'remove':
+                coll.delete_one(filter=item)
 
 
 def create_dirs():
