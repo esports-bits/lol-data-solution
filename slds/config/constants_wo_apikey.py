@@ -2,6 +2,10 @@ from numpy import int64
 import re
 
 API_KEY = ""
+MONGODB_USER = ''
+MONGODB_PASS = ''
+MONGODB_URL = ''
+MONGODB_CREDENTIALS = {'user': MONGODB_USER, 'password': MONGODB_PASS, 'url': MONGODB_URL}
 
 WORK_DIR = '../'
 LEAGUES_DATA_DIR = WORK_DIR + 'leagues_data/'
@@ -108,7 +112,7 @@ SQL_EXPORTS_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database':
 SQL_LEAGUES_CONN = {'user': '', 'password': '', 'host': '127.0.0.1', 'database': LEAGUES_DB_NAME}
 SQL_LEAGUES_ENGINE = 'mysql+pymysql://{user}:{password}@localhost/{db}'.format(user='', password='', db=LEAGUES_DB_NAME)
 SQL_EXPORTS_ENGINE = 'mysql+pymysql://{user}:{password}@localhost/{db}'.format(user='', password='', db=EXPORTS_DB_NAME)
-MONGODB_CREDENTIALS = 'mongodb+srv://{user}:{pass}@{url}'
+MONGODB_CONN = 'mongodb+srv://{user}:{password}@{url}'.format(**MONGODB_CREDENTIALS)
 
 REGIONS = {
     'BR': 'BR1',
@@ -137,3 +141,6 @@ SOLOQ_QUEUE_ID = 420
 NORMAL_BLIND_QUEUE_ID = 430
 FLEX_QUEUE_ID = 440
 RIFT_GAMES_QUEUES = [NORMAL_DRAFT_QUEUE_ID, SOLOQ_QUEUE_ID, NORMAL_BLIND_QUEUE_ID, FLEX_QUEUE_ID]
+
+DB_ITEMS = ['players', 'teams', 'competitions']
+DB_CHANGE_TYPE = ['add', 'edit', 'remove']
