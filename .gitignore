@@ -114,3 +114,8 @@ matches_raw_data/
 slds/msgbox.vbs
 *.xlsx#
 *.iml
+<<<<<<< HEAD
+=======
+slds/tests.ipynb
+slds/db_test.ipynb
+>>>>>>> origin/develop
