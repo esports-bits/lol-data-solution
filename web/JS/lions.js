@@ -41,7 +41,64 @@ $(document).ready(function(){
         });
     });
 
-// ========================  SCROLLBAR ==========================================
+
+// ========================= SEARCH TEMPORADAS ===================================
+
+$(document).ready(function(){
+        $("#inputTemporada").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+
+            $("#tablaTemporada tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            });
+
+
+        });
+    });
+
+// ========================= SEARCH SPLITS =======================================
+
+$(document).ready(function(){
+        $("#inputSplit").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+
+            $("#tablaSplit tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            });
+
+
+        });
+    });
+
+// ========================= SEARCH EVENTOS =======================================
+
+$(document).ready(function(){
+        $("#inputEvento").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+
+            $("#tablaEvento tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            });
+
+
+        });
+    });
+
+// ========================= SEARCH SERIES =======================================
+
+$(document).ready(function(){
+        $("#inputSerie").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+
+            $("#tablaSerie tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            });
+
+
+        });
+    });
+
+// ========================  SCROLLBAR ===========================================
 
 $(window).on("load resize ", function() {
   var scrollWidth = $('.tbl-content').width() - $('.tbl-content table').width();
@@ -49,17 +106,10 @@ $(window).on("load resize ", function() {
 }).resize();
 
 // ========================  MODALS =============================================
-
-// Get the modal
-var competencias = document.getElementById('#modalCompetencias');
-var modal_equipos = document.getElementById('#modalEquipos');
-var modal_jugadores = document.getElementById('#modalJugadores');
-// Get the <span> element that closes the modal
-var span = document.getElementsByClassName("close-btn-modal")[0];
-// Get the submit element that closes the modal and add the new values to the DB
-var close = document.getElementsByClassName("btn-primary")[0];
-
-// When the user clicks on the button, open the modal 
+$(document).ready(function(){
+////////////////////////////////////////////////////////
+// When the user clicks on the button, open the modal //
+////////////////////////////////////////////////////////
 
 //Competencias
 $("#btnCompetencias").click(function(){
@@ -79,7 +129,38 @@ $("#btnJugadores").click(function(){
     $("#modalJugadores").delay(250).fadeIn();    
 })
 
-// When the user clicks on <span> (x), close the modal
+//Temporadas
+$("#btnTemporada").click(function(){
+        
+    $("#modalTemporada").delay(250).fadeIn();    
+})
+
+//Splits
+$("#btnSplit").click(function(){
+        
+    $("#modalSplit").delay(250).fadeIn();    
+})
+
+//Eventos
+$("#btnEvento").click(function(){
+        
+    $("#modalEvento").delay(250).fadeIn();    
+})
+
+//Series
+$("#btnSerie").click(function(){
+        
+    $("#modalSerie").delay(250).fadeIn();    
+})
+
+//SPartidas
+$("#btnPartida").click(function(){
+        
+    $("#modalPartida").delay(250).fadeIn();    
+})
+////////////////////////////////////////////////////////
+// When the user clicks on <span> (x), close the modal//
+////////////////////////////////////////////////////////
 
 //Competencias
 $("#cerrarCompetencia").click(function(){
@@ -99,7 +180,38 @@ $("#cerrarJugador").click(function(){
     $("#modalJugadores").delay(0).fadeOut();    
 })
 
-// When the user clicks on the button, close the modal
+//Temporadas
+$("#cerrarTemporada").click(function(){
+        
+    $("#modalTemporada").delay(0).fadeOut();    
+})
+
+//Splits
+$("#cerrarSplit").click(function(){
+        
+    $("#modalSplit").delay(0).fadeOut();    
+})
+
+//Eventos
+$("#cerrarEvento").click(function(){
+        
+    $("#modalEvento").delay(0).fadeOut();    
+})
+
+//Series
+$("#cerrarSerie").click(function(){
+        
+    $("#modalSerie").delay(0).fadeOut();    
+})
+
+//Partidass
+$("#cerrarPartida").click(function(){
+        
+    $("#modalPartida").delay(0).fadeOut();    
+})
+////////////////////////////////////////////////////////
+// When the user clicks on the button, close the modal//
+////////////////////////////////////////////////////////
 
 //Competencias
 $("#competenciaNueva").click(function(){
@@ -119,18 +231,34 @@ $("#jugadorNuevo").click(function(){
     $("#modalJugadores").delay(0).fadeOut();    
 })
 
-// When the user clicks anywhere outside of the modal, keep it open
-window.onclick = function(event) {
-    if (event.target == competencias) {
-        competencias.style.display = "block"
-    }
+//Temporadas
+$("#TemporadaNueva").click(function(){
+        
+    $("#modalTemporada").delay(0).fadeOut();    
+})
 
-    else if (event.target == modal_equipos){
-        modal_equipos.style.display = "block"
-    }
+//Splits
+$("#SplitNuevo").click(function(){
+        
+    $("#modalSplit").delay(0).fadeOut();    
+})
 
-    else if (event.target == modal_jugadores){
-        modal_jugadores.style.display = "block"
-    }
-}
+//Eventos
+$("#eventoNuevo").click(function(){
+        
+    $("#modalEvento").delay(0).fadeOut();    
+})
 
+//Series
+$("#serieNuevo").click(function(){
+        
+    $("#modalSerie").delay(0).fadeOut();    
+})
+
+//Partidas
+$("#partidaNuevo").click(function(){
+        
+    $("#modalPartida").delay(0).fadeOut();    
+})
+
+});

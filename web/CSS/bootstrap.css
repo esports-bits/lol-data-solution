@@ -543,7 +543,7 @@ pre code {
 }
 
 .pre-scrollable {
-  max-height: 340px;
+  max-height: 4px;
   overflow-y: scroll;
   overflow-x: hidden;
 }
@@ -1517,6 +1517,7 @@ pre code {
 
 .table {
   min-width: 90%;
+  min-height: 90%;
   max-height: 100%;
   max-width: 100%;
   margin-bottom: 1rem;

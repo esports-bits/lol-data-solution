@@ -1,9 +1,7 @@
 body{
       
-	font-family: 'Montserrat', sans-serif;
-
-    
-     z-index: -1;
+	font-family: 'Montserrat', sans-serif;    
+    z-index: -1;
   
     }
 
@@ -23,7 +21,23 @@ table{
  	margin-top: 5%;
  }
 
+
+ .background{
  
+ 	background: linear-gradient(217deg,  rgba(255,255,255,0.9), rgba(255,255,255,.3)70.71%),
+            	linear-gradient(127deg,  rgba(255,255,255,0.9), rgba(0,0,100,.2)70.71%),
+            	linear-gradient(336deg,  rgba(255,255,255,0.9), rgba(0,0,100,.2)70.71%),
+            	url('../IMG/3.png');
+ 	background-repeat: no-repeat;
+ 	background-size: auto;
+ 	background-attachment: fixed;
+    background-position: center;
+ }
+
+/**********************************************************************/
+/**************************  MINI LOGO  *******************************/
+/**********************************************************************/
+
 #wrap {
   overflow: hidden;
   position: absolute;
@@ -45,17 +59,9 @@ table{
 	z-index: -3;
 }
 
- .background{
- 
- 	background: linear-gradient(217deg,  rgba(255,255,255,0.9), rgba(255,255,255,.3)70.71%),
-            	linear-gradient(127deg,  rgba(255,255,255,0.9), rgba(0,0,100,.2)70.71%),
-            	linear-gradient(336deg,  rgba(255,255,255,0.9), rgba(0,0,100,.2)70.71%),
-            	url('../IMG/3.png');
- 	background-repeat: no-repeat;
- 	background-size: auto;
- 	background-attachment: fixed;
-    background-position: center;
- }
+/**********************************************************************/
+/**************************  LINEAS  **********************************/
+/**********************************************************************/
 
 .line-reveal {
   width: 100%;
@@ -184,13 +190,8 @@ table{
 #cssmenu ul li.active a:before {
   width: 100%;
 }
-#cssmenu.align-right li.last > a:after,
-#cssmenu.align-right li:last-child > a:after {
-  display: block;
-}
-#cssmenu.align-right li:first-child a:after {
-  display: none;
-}
+
+
 @media screen and (max-width: 768px) {
   #cssmenu ul li {
     float: none;
@@ -200,6 +201,8 @@ table{
     width: 100%;
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
+    -ms-box-sizing: border-box;
+    -o-box-sizing: border-box;
     box-sizing: border-box;
     border-bottom: 1px solid #fb998c;
   }
@@ -227,7 +230,7 @@ table{
 	margin: 0 auto;
 	padding: 4px;		
 	position: absolute;
-	top: 43%;
+	top: 42%;
 	left: 20%;
 	transform: translateX(20%) translateY(-20%) ;
 	cursor: pointer;
@@ -259,7 +262,7 @@ table{
 
 #inputCompetencias {
     background-repeat: no-repeat; /* Do not repeat the icon image */
-    width: 83%; 
+    width: auto; 
     height: 5%;
     padding: 12px 20px 12px 40px; /* Add some padding */
     border: 1px solid #ddd; /* Add a grey border */
@@ -300,7 +303,7 @@ table{
 }
 
 .close-competencias{
-	margin-right: 27%;
+	margin-right: 21%;
 	margin-top: 17%;
 	float: right;
     font-size: 1.5rem;
@@ -328,7 +331,7 @@ table{
 	margin: 0 auto;
 	padding: 4px;
 	position: absolute;
-	top: 43%;
+	top: 42%;
 	left: 50%;
 	transform: translateX(-50%) translateY(-20%);
 	cursor: pointer;
@@ -356,7 +359,7 @@ table{
 
 #inputEquipos {
     background-repeat: no-repeat; /* Do not repeat the icon image */
-    width: 70%; 
+    width: auto; 
     height: 5%;
     padding: 12px 20px 12px 40px; /* Add some padding */
     border: 1px solid #ddd; /* Add a grey border */
@@ -412,7 +415,7 @@ table{
 
 .add-button-equipos {
   margin-top: 5%;
-  margin-left: 9%;
+  margin-left: 18%;
 }
 
 /******************************************************************/
@@ -430,7 +433,7 @@ table{
 	border:0px solid rgb(170,0,0);
 	padding: 4px;
 	position: absolute;
-	top: 43%;
+	top: 42%;
 	left: 76%;
 	transform: translateX(-94%) translateY(-20%);
 	cursor: pointer;	
@@ -495,7 +498,7 @@ table{
 }
 
 .close-jugadores{
-	margin-right: 18.4%;
+	margin-right: 18%;
 	margin-top: 15.7%;
 	float: right;
     font-size: 1.5rem;
@@ -512,6 +515,498 @@ table{
   margin-left: 3%;
 }
 
+/******************************************************************/
+/*************************** TEMPORADA ****************************/
+/******************************************************************/
+
+#temporada
+{
+	width: 205px;
+	height: 65px;
+	margin: 0 auto;
+	padding: 4px;		
+	position: absolute;
+	top: 25%;
+	left: 22%;
+	transform: translateX(24%) translateY(-10%) ;
+	cursor: pointer;
+	background: rgb(255,0,0);
+	background: linear-gradient(315deg, rgba(255,7,2,1) 7%, rgba(230,20,8,1) 93%);
+	border-radius: 5px;
+	border:0px solid rgb(170,0,0);
+	color: white;
+	 -webkit-transition: width 1s; 
+	 -webkit-transition: opacity 0.5s ease-in-out;
+    transition: width 1s;
+    animation-timing-function: ease-out;
+    animation-name: temporada;/* The element to apply the animation to */
+    animation-duration: 1s;
+    z-index: 3;
+}
+
+
+
+@keyframes temporada {
+  0% { opacity: 0; }
+  20% { opacity: 0; }
+  40% { opacity: 0.3; }
+  60% { opacity: 0.5; }
+  80% { opacity: 0.9; }
+  100% { opacity: 1; }
+}
+
+
+#inputTemporada {
+    background-repeat: no-repeat; /* Do not repeat the icon image */
+    width: auto; 
+    height: 5%;
+    padding: 12px 20px 12px 40px; /* Add some padding */
+    border: 1px solid #ddd; /* Add a grey border */
+    margin-bottom: 12px; /* Add some space below the input */
+}
+
+#tabla-temporada{
+	display: none;
+	margin: 0px auto;
+	margin-top: 3.5%;
+}
+
+#tablaTemporada {
+    border-collapse: collapse; /* Collapse borders */
+    width: 100%; /* Full-width */
+    border: 1px solid #ddd; /* Add a grey border */
+}
+
+#tablaTemporada th, #tablaTemporada td {
+    text-align: center; /* Left-align text */
+    padding: 12px; /* Add padding */
+}
+
+#tablaTemporada tr {
+    /* Add a bottom border to all table rows */
+    border-bottom: 1px solid #ddd; 
+}
+
+#tablaTemporada tr.header, #tablaTemporada tr:hover {
+    /* Add a grey background color to the table header and on hover */
+    background-color: #f1f1f1;
+    color: black;
+}
+
+#close-temporada{
+	display: none;
+	cursor: pointer;
+}
+
+.close-temporada{
+	margin-right: 24%;
+	margin-top: 10%;
+	float: right;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: .5;
+    z-index: 1;
+}
+
+.add-button-temporada {
+  margin-top: 5%;
+  margin-left: 20%;
+}
+
+/******************************************************************/
+/*************************** SPLIT ********************************/
+/******************************************************************/
+
+#split
+{
+	width: 205px;
+	height: 65px;
+	margin: 0 auto;
+	padding: 4px;
+	position: absolute;
+	top: 25%;
+	left: 50%;
+	transform: translateX(-50%) translateY(-10%);
+	cursor: pointer;
+	background: rgb(255,0,0);
+	background: linear-gradient(315deg, rgba(255,7,2,1) 7%, rgba(230,20,8,1) 93%);
+	border-radius: 5px;
+	border:0px solid rgb(170,0,0);	
+	color: white;
+	 -webkit-transition: width 1s; 
+    transition: width 1s;
+    animation-name: equipos;/* The element to apply the animation to */
+    animation-duration: 1s; 
+    z-index: 2; 
+}
+
+
+
+@keyframes split {
+  0% { opacity: 0; }
+  20% { opacity: 0; }
+  40% { opacity: 0.3; }
+  60% { opacity: 0.5; }
+  80% { opacity: 0.9; }
+  100% { opacity: 1; }
+}
+
+
+#inputSplit {
+    background-repeat: no-repeat; /* Do not repeat the icon image */
+    width: auto; 
+    height: 5%;
+    padding: 12px 20px 12px 40px; /* Add some padding */
+    border: 1px solid #ddd; /* Add a grey border */
+    margin-bottom: 12px; /* Add some space below the input */
+}
+
+#tabla-split{
+	display: none;
+	margin: 0px auto;
+	margin-top: 3.5%;
+}
+
+#tablaSplit {
+    border-collapse: collapse; /* Collapse borders */
+    width: 100%; /* Full-width */
+    border: 1px solid #ddd; /* Add a grey border */
+}
+
+#tablaSplit th, #tablaSplit td {
+    text-align: center; /* Left-align text */
+    padding: 12px; /* Add padding */
+}
+
+#tablaSplit tr {
+    /* Add a bottom border to all table rows */
+    border-bottom: 1px solid #ddd; 
+}
+
+#tablaSplit tr.header, #tablaSplit tr:hover {
+    /* Add a grey background color to the table header and on hover */
+    background-color: #f1f1f1;
+    color: black;
+}
+
+#close-split{
+	display: none;
+	cursor: pointer;
+}
+
+.close-split{
+	margin-right: 33%;
+	margin-top: 10%;
+	float: right;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: .5;
+    z-index: 1;
+}
+
+.add-button-split {
+  margin-top: 5%;
+  margin-left: 20%;
+}
+
+/*******************************************************************/
+/*************************** EVENTOS *******************************/
+/*******************************************************************/
+
+#evento 
+{
+	width: 205px;
+	height: 65px;
+	margin: 0 auto;
+	background: rgb(255,0,0);
+	background: linear-gradient(315deg, rgba(255,7,2,1) 7%, rgba(230,20,8,1) 93%);
+	border-radius: 5px;
+	border:0px solid rgb(170,0,0);
+	padding: 4px;
+	position: absolute;
+	top: 24%;
+	left: 77.5%;
+	transform: translateX(-125%) translateY(5%);
+	cursor: pointer;	
+	color: white;
+	 -webkit-transition: width 1s; 
+    transition: width 1s;
+    animation-name: evento;/* The element to apply the animation to */
+    animation-duration: 1s; 
+    z-index: 1; 
+}
+
+@keyframes evento {
+  0% { opacity: 0; }
+  20% { opacity: 0; }
+  40% { opacity: 0.3; }
+  60% { opacity: 0.5; }
+  80% { opacity: 0.9; }
+  100% { opacity: 1; }
+}
+
+#inputEvento{
+    background-repeat: no-repeat; /* Do not repeat the icon image */
+    width: auto; 
+    height: 5%;
+    padding: 12px 20px 12px 40px; /* Add some padding */
+    border: 1px solid #ddd; /* Add a grey border */
+    margin-bottom: 12px; /* Add some space below the input */
+    margin-left: 30%;
+}
+
+#tabla-evento{
+	display: none;
+	margin: 0px auto;
+	margin-top: 3px;
+}
+
+#tablaEvento {
+    border-collapse: collapse; /* Collapse borders */
+    width: 100%; /* Full-width */
+    height: auto;
+    border: 1px solid #ddd; /* Add a grey border */
+}
+
+#tablaEvento th, #tablaEvento td {
+    text-align: center; /* Left-align text */
+    padding: 12px; /* Add padding */
+}
+
+#tablaEvento tr {
+    /* Add a bottom border to all table rows */
+    border-bottom: 1px solid #ddd; 
+}
+
+#tablaEvento tr.header, #tablaEvento tr:hover {
+    /* Add a grey background color to the table header and on hover */
+    background-color: #f1f1f1;
+    color: black;
+}
+
+#close-evento{
+	display: none;
+	cursor: pointer;
+}
+
+.close-evento{
+	margin-right: 28%;
+	margin-top: 12%;
+	float: right;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: .5;
+    z-index: 1;
+}
+
+.add-button-evento {
+  margin-top: 5%;
+  margin-left: 20%;
+}
+
+
+/*******************************************************************/
+/*************************** SERIE *********************************/
+/*******************************************************************/
+
+#serie 
+{
+	width: 205px;
+	height: 65px;
+	margin: 0 auto;
+	background: rgb(255,0,0);
+	background: linear-gradient(315deg, rgba(255,7,2,1) 7%, rgba(230,20,8,1) 93%);
+	border-radius: 5px;
+	border:0px solid rgb(170,0,0);
+	padding: 4px;
+	position: absolute;
+	top: 45%;
+	left: 34%;
+	transform: translateX(5%) translateY(-25%);
+	cursor: pointer;	
+	color: white;
+	 -webkit-transition: width 1s; 
+    transition: width 1s;
+    animation-name: serie;/* The element to apply the animation to */
+    animation-duration: 1s; 
+    z-index: 1; 
+}
+
+@keyframes serie {
+  0% { opacity: 0; }
+  20% { opacity: 0; }
+  40% { opacity: 0.3; }
+  60% { opacity: 0.5; }
+  80% { opacity: 0.9; }
+  100% { opacity: 1; }
+}
+
+#inputSerie{
+    background-repeat: no-repeat; /* Do not repeat the icon image */
+    width: auto; 
+    height: 5%;
+    padding: 12px 20px 12px 40px; /* Add some padding */
+    border: 1px solid #ddd; /* Add a grey border */
+    margin-bottom: 12px; /* Add some space below the input */
+    margin-left: 30%;
+}
+
+#tabla-serie{
+	display: none;
+	margin: 0px auto;
+	margin-top: 3px;
+}
+
+#tablaSerie {
+    border-collapse: collapse; /* Collapse borders */
+    width: 100%; /* Full-width */
+    height: auto;
+    border: 1px solid #ddd; /* Add a grey border */
+}
+
+#tablaSerie th, #tablaSerie td {
+    text-align: center; /* Left-align text */
+    padding: 12px; /* Add padding */
+}
+
+#tablaSerie tr {
+    /* Add a bottom border to all table rows */
+    border-bottom: 1px solid #ddd; 
+}
+
+#tablaSerie tr.header, #tablaSerie tr:hover {
+    /* Add a grey background color to the table header and on hover */
+    background-color: #f1f1f1;
+    color: black;
+}
+
+#close-serie{
+	display: none;
+	cursor: pointer;
+}
+
+.close-serie{
+	margin-right: 29%;
+	margin-top: 16%;
+	float: right;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: .5;
+    z-index: 1;
+}
+
+.add-button-serie {
+  margin-top: 5%;
+  margin-left: 20%;
+}
+
+/*********************************************************************/
+/*************************** PARTIDA *********************************/
+/*********************************************************************/
+#partida 
+{
+  width: 205px;
+  height: 65px;
+  margin: 0 auto;
+  background: rgb(255,0,0);
+  background: linear-gradient(315deg, rgba(255,7,2,1) 7%, rgba(230,20,8,1) 93%);
+  border-radius: 5px;
+  border:0px solid rgb(170,0,0);
+  padding: 4px;
+  position: absolute;
+  top: 45%;
+  left: 61%;
+  transform: translateX(-65%) translateY(-25%);
+  cursor: pointer;  
+  color: white;
+   -webkit-transition: width 1s; 
+    transition: width 1s;
+    animation-name: partida;/* The element to apply the animation to */
+    animation-duration: 1s; 
+    z-index: 1; 
+}
+
+@keyframes partida {
+  0% { opacity: 0; }
+  20% { opacity: 0; }
+  40% { opacity: 0.3; }
+  60% { opacity: 0.5; }
+  80% { opacity: 0.9; }
+  100% { opacity: 1; }
+}
+
+#inputPartida{
+    background-repeat: no-repeat; /* Do not repeat the icon image */
+    width: 61%; 
+    height: 5%;
+    padding: 12px 20px 12px 40px; /* Add some padding */
+    border: 1px solid #ddd; /* Add a grey border */
+    margin-bottom: 12px; /* Add some space below the input */
+}
+
+#tabla-partida{
+  display: none;
+  margin: 0px auto;
+  margin-top: 5px;
+}
+
+#tablaPartida {
+    border-collapse: collapse; /* Collapse borders */
+    width: 100%; /* Full-width */
+    height: auto;
+    border: 1px solid #ddd; /* Add a grey border */
+}
+
+#tablaPartida th, #tablaPartida td {
+    text-align: center; /* Left-align text */
+    padding: 12px; /* Add padding */
+}
+
+#tablaPartida tr {
+    /* Add a bottom border to all table rows */
+    border-bottom: 1px solid #ddd; 
+}
+
+#tablaPartida tr.header, #tablaPartida tr:hover {
+    /* Add a grey background color to the table header and on hover */
+    background-color: #f1f1f1;
+    color: black;
+}
+
+#close-partida{
+  display: none;
+  cursor: pointer;
+}
+
+.close-partida{
+  margin-right: 11%;
+  margin-top: 15.7%;
+  float: right;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: .5;
+    z-index: 1;
+}
+
+.add-button-partida {
+  margin-top: 5%;
+  margin-left: 10%;
+}
 /******************************************************************/
 /*************************** TABLAS *******************************/
 /******************************************************************/
@@ -539,7 +1034,7 @@ table{
 
 .tbl-content{
   height:100px;
-  overflow-x:auto;
+  overflow-x:scroll;
   margin-top: 1%;
   border: 0px solid rgba(255,255,255,0.1);
   background: transparent;
