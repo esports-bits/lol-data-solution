@@ -10,7 +10,7 @@ from tqdm import tqdm
 from requests.exceptions import HTTPError
 from converters.data2files import get_runes_reforged_json
 from converters.data2frames import game_to_dataframe as g2df
-from converters.data2frames import mongodb_players_to_dataframe
+from converters.data2frames import get_soloq_dataframe
 from sqlalchemy import create_engine
 from datetime import datetime as dt, timedelta
 from config.constants import SQL_LEAGUES_CONN, MONGODB_CONN, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
@@ -346,7 +346,7 @@ def parse_args(args):
 
             # Merge Solo Q players info with data
             if league == SOLOQ:
-                player_info_df = mongodb_players_to_dataframe(db.mongo_players)
+                player_info_df = get_soloq_dataframe(db.mongo_players)
                 final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
                                           how='left')
 
