@@ -291,7 +291,7 @@ class DataBase:
         summs = self.rw.static_data.summoner_spells(region=self.region, version=versions['versions'][0])
         summs['_id'] = 'summoner_spells'
         self.mongo_static_data.replace_one(filter={'_id': 'summoner_spells'}, replacement=summs, upsert=True)
-        runes = {'runes': get_runes_reforged_json(), '_id': 'runes_reforged'}
+        runes = {'runes': get_runes_reforged_json(versions), '_id': 'runes_reforged'}
         self.mongo_static_data.replace_one(filter={'_id': 'runes_reforged'}, replacement=runes, upsert=True)
 
     def modify_item_in_db(self, item_type, change_type, item):

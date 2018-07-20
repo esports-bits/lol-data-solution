@@ -411,10 +411,14 @@ def get_soloq_dataframe(players_db):
         return player
 
     cursor = players_db.aggregate([
-        {'$lookup': {'from': "teams", 'localField': "team_abbv", 'foreignField': "key", 'as': "team_info"}},
-        {'$lookup': {'from': "competitions", 'localField': "team_info.competition", 'foreignField': "key",
-                     'as': "comp_info"}}
+        {'$lookup': {'from': 'teams', 'localField': 'team_abbv', 'foreignField': 'key', 'as': 'team_info'}},
+        {'$lookup': {'from': 'competitions', 'localField': 'team_info.competition', 'foreignField': 'key',
+                     'as': 'comp_info'}}
     ])
     return pd.concat([pd.DataFrame(p, index=(0,)) for p in
                       [transform_soloq_player_data_for_dataframe(player) for player in cursor]]).rename(
         columns={'key': 'player_name'})
+
+
+def get_slo_dataframe(slo_db):
+

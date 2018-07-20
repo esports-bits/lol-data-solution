@@ -21,8 +21,8 @@ def read_json(save_dir, file_name):
             return json.load(fp)
 
 
-def get_runes_reforged_json():
-    version = read_json(STATIC_DATA_DIR, file_name='versions')[0]
+def get_runes_reforged_json(versions):
+    version = versions['versions'][0]
     url = DATA_DRAGON_URL.format(version=version, language=DD_LANGUAGE, endpoint=DD_RUNES_REFORGED)
     r = requests.get(url)
     return r.json()
