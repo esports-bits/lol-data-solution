@@ -350,10 +350,8 @@ def parse_args(args):
                 final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
                                           how='left')
 
-                final_df.to_excel(LEAGUES_DATA_DICT[SOLOQ][EXCEL_EXPORT_PATH_MERGED])
-                print("\tGames merged and exported.")
-                return
             final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+            print('\tGames exported.')
 
     finally:
         db.close_connections()
