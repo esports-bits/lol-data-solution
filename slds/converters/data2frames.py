@@ -420,5 +420,5 @@ def get_soloq_dataframe(players_db):
         columns={'key': 'player_name'})
 
 
-def get_slo_dataframe(slo_db):
-
+# def get_slo_dataframe(slo_db):
+#
