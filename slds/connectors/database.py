@@ -1,7 +1,6 @@
 import os
 import urllib.request
 import json
-import pymysql.cursors
 import pandas as pd
 from pymongo import MongoClient
 from itertools import chain
@@ -12,10 +11,10 @@ from converters.data2files import get_runes_reforged_json
 from converters.data2frames import game_to_dataframe as g2df
 from converters.data2frames import get_soloq_dataframe, get_league_dataframe
 from datetime import datetime as dt, timedelta
-from config.constants import SQL_LEAGUES_CONN, MONGODB_CONN, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
+from config.constants import MONGODB_CONN, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
     STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, TOURNAMENT_GAME_ENDPOINT, EXPORTS_DIR, \
     RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, \
-    DB_ITEMS, DB_CHANGE_TYPE, SCRIMS
+    DB_ITEMS, DB_CHANGE_TYPE
 
 
 class DataBase:
@@ -33,8 +32,6 @@ class DataBase:
         self.mongo_teams = self.mongo_cnx.slds.teams
         self.mongo_competitions = self.mongo_cnx.slds.competitions
         self.mongo_slo = self.mongo_cnx.slds.slo
-        self.sql_leagues_cnx = pymysql.connect(**SQL_LEAGUES_CONN)
-        self.sql_leagues_cnx.set_charset('utf8')
 
     def get_old_and_new_game_ids(self, **kwargs):
         if self.league == 'SOLOQ':
@@ -57,49 +54,56 @@ class DataBase:
 
         return current_game_ids, new_game_ids
 
-    # CHANGE SQL IMPLEMENTATION FOR MONGODB
     def get_account_ids(self, **kwargs):
+        players = self.mongo_players
         if kwargs['team_abbv'] is not None:
             print('\tLooking for account ids of {} players.'.format(kwargs['team_abbv'].replace(',', ' and ')))
             abbvs = kwargs['team_abbv'].split(',')
             if len(abbvs) == 1:
-                query = 'SELECT DISTINCT account_id FROM soloq WHERE team_abbv = {}'.format('\"' + abbvs[0] + '\"')
+                team = abbvs[0]
             elif len(abbvs) > 1:
                 query = 'SELECT DISTINCT account_id FROM soloq WHERE team_abbv IN {}'.format(tuple(abbvs))
+                team = {'$in': abbvs}
             else:
                 print('No abbreviations selected. Check help for more information.')
                 return
+            cursor = players.find({'team_abbv': team}, {'_id': 0, 'account_id': 1})
         elif kwargs['competition'] is not None:
             print('\tLooking for account ids players competing in the {}.'.format(kwargs['competition']))
             competitions = kwargs['competition'].split(',')
             if len(competitions) == 1:
-                query = 'SELECT DISTINCT account_id FROM soloq WHERE competition_abbv = {}' \
-                    .format('\"' + competitions[0] + '\"')
+                competition = competitions[0]
             elif len(competitions) > 1:
-                query = 'SELECT DISTINCT account_id FROM soloq WHERE competition_abbv IN {}' \
-                    .format(tuple(competitions))
+                competition = {'$in': competitions}
             else:
                 print('\tNo competitions selected. Check help for more information.')
                 return
+            cursor = players.aggregate([
+                {
+                    '$lookup': {'from': 'teams', 'localField': 'team_abbv', 'foreignField': 'key', 'as': 'team_info'}
+                },
+                {
+                    '$match': {'team_info.competition': competition}
+                }
+
+            ])
         elif kwargs['region_filter'] is not None:
             print('\tLooking for account ids players competing in {}.'.format(kwargs['region_filter'].upper()
                                                                               .replace(',', ' and ')))
             regions = [REGIONS[region.upper()] for region in kwargs['region_filter'].split(',')]
             if len(regions) == 1:
-                query = 'SELECT DISTINCT account_id FROM soloq WHERE region = {}' \
-                    .format('\"' + str(regions[0]) + '\"')
+                region = REGIONS[regions[0]]
             elif len(regions) > 1:
-                query = 'SELECT DISTINCT account_id FROM soloq WHERE region IN {}' \
-                    .format(tuple(regions))
+                region = {'$in': regions}
             else:
                 print('\tNo region selected. Check help for more information.')
                 return
+            cursor = players.find({'region': region}, {'_id': 0, 'account_id': 1})
         else:
             print('\tLooking for account ids of every player in the DB.')
-            query = 'SELECT DISTINCT account_id FROM soloq'
-        cursor = self.sql_leagues_cnx.cursor()
-        cursor.execute(query)
-        return [gid[0] for gid in cursor]
+            cursor = players.find({}, {'_id': 0, 'account_id': 1})
+
+        return [p['account_id'] for p in cursor]
 
     def get_new_ids(self, old, new):
         if self.league == SLO:
@@ -163,15 +167,11 @@ class DataBase:
                             '"timeline": timeline_dict}.')
 
     def get_supported_leagues(self):
-        query = 'SELECT DISTINCT league_abbv FROM soloq'
-        cursor = self.sql_leagues_cnx.cursor()
-        cursor.execute(query)
-        return [abbv[0] for abbv in cursor]
+        cursor = self.mongo_competitions.find({}, {'_id': 0, 'key': 1})
+        return [abbv['key'] for abbv in cursor]
 
     def get_supported_teams(self):
-        query = 'SELECT DISTINCT team_abbv FROM soloq'
-        cursor = self.sql_leagues_cnx.cursor()
-        cursor.execute(query)
+        cursor = self.mongo_teams.find({}, {'_id': 0, 'key': 1})
         return [abbv[0] for abbv in cursor]
 
     def concat_games(self, df):
@@ -253,7 +253,6 @@ class DataBase:
 
     def close_connections(self):
         self.mongo_cnx.close()
-        self.sql_leagues_cnx.close()
 
     @staticmethod
     def __str_date_to_timestamp(date, time_delta=None):
