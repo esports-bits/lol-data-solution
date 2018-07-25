@@ -62,7 +62,6 @@ class DataBase:
             if len(abbvs) == 1:
                 team = abbvs[0]
             elif len(abbvs) > 1:
-                query = 'SELECT DISTINCT account_id FROM soloq WHERE team_abbv IN {}'.format(tuple(abbvs))
                 team = {'$in': abbvs}
             else:
                 print('No abbreviations selected. Check help for more information.')
