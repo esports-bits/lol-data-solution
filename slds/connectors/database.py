@@ -27,6 +27,8 @@ class DataBase:
         self.mongo_soloq_tl_col = self.mongo_cnx.slds.soloq_tl
         self.mongo_slo_m_col = self.mongo_cnx.slds.slo_m
         self.mongo_slo_tl_col = self.mongo_cnx.slds.slo_tl
+        self.mongo_scrims_m_col = self.mongo_cnx.slds.scrims_m
+        self.mongo_scrims_tl_col = self.mongo_cnx.slds.scrims_tl
         self.mongo_static_data = self.mongo_cnx.slds.static_data
         self.mongo_players = self.mongo_cnx.slds.players
         self.mongo_teams = self.mongo_cnx.slds.teams
@@ -47,7 +49,7 @@ class DataBase:
             raw_data_coll_name = self.league.lower() + '_m'
             raw_data_coll = self.mongo_cnx.slds.get_collection(raw_data_coll_name)
             info_coll = self.mongo_cnx.slds.get_collection(self.league.lower())
-            cursor1 = info_coll.find({'season': 8, 'split': 'summer'}, {'_id': 0, 'game_id': 1, 'realm': 1, 'hash': 1})
+            cursor1 = info_coll.find({}, {'_id': 0, 'game_id': 1, 'realm': 1, 'hash': 1})
             new_game_ids = [(record['game_id'], record['realm'], record['hash']) for record in cursor1]
             cursor2 = raw_data_coll.find({}, {'_id': 0, 'gameId': 1, 'platformId': 1})
             current_game_ids = [(record['gameId'], record['platformId']) for record in cursor2]
@@ -105,7 +107,7 @@ class DataBase:
         return [p['account_id'] for p in cursor]
 
     def get_new_ids(self, old, new):
-        if self.league == SLO:
+        if self.league != SOLOQ:
             return [gid for gid in new if (gid[0], gid[1]) not in old]
         return list(set(new) - set(old))
 
@@ -186,8 +188,10 @@ class DataBase:
                                    custom=(g[1]['hash'] is None),
                                    week=g[1]['week'], database=self.mongo_static_data) for g in df.iterrows()])
         elif self.league == 'SCRIMS':
-            return pd.concat([g2df(match=None,
-                                   timeline=None,
+            return pd.concat([g2df(match=self.mongo_scrims_m_col.find_one({'platformId': g[1]['realm'],
+                                                                           'gameId': g[1]['game_id']}, {'_id': 0}),
+                                   timeline=self.mongo_scrims_tl_col.find_one({'platformId': str(g[1]['realm']),
+                                                                               'gameId': str(g[1]['game_id'])}),
                                    custom_positions=list(g[1][SCRIMS_POSITIONS_COLS]),
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
