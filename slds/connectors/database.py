@@ -186,7 +186,11 @@ class DataBase:
                                    custom_positions=STANDARD_POSITIONS,
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom=(g[1]['hash'] is None),
-                                   week=g[1]['week'], database=self.mongo_static_data) for g in df.iterrows()])
+                                   week=g[1]['week'],
+                                   database=self.mongo_static_data,
+                                   split=g[1]['split'],
+                                   season=g[1]['season']
+                                   ) for g in df.iterrows()])
         elif self.league == 'SCRIMS':
             return pd.concat([g2df(match=self.mongo_scrims_m_col.find_one({'platformId': g[1]['realm'],
                                                                            'gameId': g[1]['game_id']}, {'_id': 0}),
@@ -249,7 +253,7 @@ class DataBase:
                 mongo_query['split'] = kwargs['split']
             if kwargs['season']:
                 print('\tLooking for games played in season {}.'.format(kwargs['season']))
-                mongo_query['season'] = kwargs['season']
+                mongo_query['season'] = int(kwargs['season'])
 
         games = coll.find(mongo_query, {'_id': 0, game_id: 1, realm: 1})
         return [(g[game_id], g[realm]) for g in games]

@@ -21,4 +21,10 @@ def export_dataset_kwargs(df, kwargs):
     if 'blue_win' in kwargs:
         df['blue_win'] = kwargs['blue_win']
 
+    if 'split' in kwargs:
+        df['split'] = kwargs['split']
+
+    if 'season' in kwargs:
+        df['season'] = kwargs['season']
+
     return df

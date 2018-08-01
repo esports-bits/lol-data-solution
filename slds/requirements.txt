@@ -5,3 +5,4 @@ riotwatcher
 requests
 numpy
 dnspython
+wtforms
