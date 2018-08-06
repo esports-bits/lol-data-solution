@@ -119,3 +119,4 @@ slds/msgbox.vbs
 slds/tests.ipynb
 slds/db_test.ipynb
 >>>>>>> origin/develop
+*.ipynb

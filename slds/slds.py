@@ -1,6 +1,6 @@
 import argparse
 from connectors import filesystem, database
-from config.constants import SUPPORTED_LEAGUES, SUPPORTED_CONNECTORS, REGIONS, PATCH_PATTERN
+from config.constants import SUPPORTED_LEAGUES, SUPPORTED_CONNECTORS, REGIONS, PATCH_PATTERN, API_KEY
 
 
 def parse_args():
@@ -85,7 +85,7 @@ def main():
     elif args.connector.upper() == 'FS':
         filesystem.parse_args(args)
     elif args.connector.upper() == 'DB':
-        database.parse_args(args)
+        database.parse_args(args, API_KEY)
     else:
         print('That connector is not supported.')
         return

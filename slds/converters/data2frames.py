@@ -270,7 +270,9 @@ def timeline_participant_stats_to_dataframe(timeline):
     tl_frames = timeline['frames']
     tl_participants = [frame['participantFrames'] for frame in tl_frames]
     tl_ps_df = pd.concat(
-        [pd.DataFrame(stats, index=(i,)) for i, p in enumerate(tl_participants) for p_id, stats in p.items()])
+        [pd.DataFrame(stats, index=(i,))
+         for i, p in enumerate(tl_participants)
+         for p_id, stats in p.items()])
     return tl_ps_df.reset_index().rename(columns={'index': 'frame'})
 
 

@@ -11,15 +11,15 @@ from converters.data2files import get_runes_reforged_json
 from converters.data2frames import game_to_dataframe as g2df
 from converters.data2frames import get_soloq_dataframe, get_league_dataframe
 from datetime import datetime as dt, timedelta
-from config.constants import MONGODB_CONN, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
+from config.constants import MONGODB_CONN, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
     STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, TOURNAMENT_GAME_ENDPOINT, EXPORTS_DIR, \
-    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, \
+    RIFT_GAMES_QUEUES, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, \
     DB_ITEMS, DB_CHANGE_TYPE
 
 
 class DataBase:
-    def __init__(self, region, league):
-        self.rw = RiotWatcher(API_KEY)
+    def __init__(self, api_key, region, league):
+        self.rw = RiotWatcher(api_key)
         self.region = region
         self.league = league
         self.mongo_cnx = MongoClient(MONGODB_CONN)
@@ -86,7 +86,6 @@ class DataBase:
                 {
                     '$match': {'team_info.competition': competition}
                 }
-
             ])
         elif kwargs['region_filter'] is not None:
             print('\tLooking for account ids players competing in {}.'.format(kwargs['region_filter'].upper()
@@ -190,7 +189,7 @@ class DataBase:
                                    database=self.mongo_static_data,
                                    split=g[1]['split'],
                                    season=g[1]['season']
-                                   ) for g in df.iterrows()])
+                                   ) for g in tqdm(df.iterrows(), total=df.shape[0])])
         elif self.league == 'SCRIMS':
             return pd.concat([g2df(match=self.mongo_scrims_m_col.find_one({'platformId': g[1]['realm'],
                                                                            'gameId': g[1]['game_id']}, {'_id': 0}),
@@ -201,20 +200,20 @@ class DataBase:
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
                                    custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n'], blue_win=g[1]['blue_win'],
                                    database=self.mongo_static_data
-                                   ) for g in df.iterrows()])
+                                   ) for g in tqdm(df.iterrows(), total=df.shape[0])])
         elif self.league == 'LCK':
             return pd.concat([g2df(match=None,
                                    timeline=None,
                                    week=g[1]['week'], custom=False,
                                    custom_positions=STANDARD_POSITIONS, database=self.mongo_static_data
-                                   ) for g in df.iterrows()])
+                                   ) for g in tqdm(df.iterrows())])
         elif self.league == 'SOLOQ':
             return pd.concat([g2df(match=self.mongo_soloq_m_col.find_one({'platformId': gid[1][1],
                                                                           'gameId': int(gid[1][0])}, {'_id': 0}),
                                    timeline=self.mongo_soloq_tl_col.find_one({'platformId': gid[1][1],
                                                                               'gameId': str(gid[1][0])}, {'_id': 0}),
                                    custom=False, database=self.mongo_static_data
-                                   ) for gid in df.iterrows()])
+                                   ) for gid in tqdm(df.iterrows(), total=df.shape[0])])
 
     def get_stored_game_ids(self, **kwargs):
         mongo_query = {}
@@ -303,12 +302,12 @@ def create_dirs():
         os.makedirs(EXPORTS_DIR)
 
 
-def parse_args(args):
+def parse_args(args, api_key):
     create_dirs()
     kwargs = vars(args)
     region = REGIONS[args.region.upper()]
     league = args.league.upper()
-    db = DataBase(region, league)
+    db = DataBase(api_key, region, league)
     try:
         if args.update_static_data:
             db.save_static_data_files()
