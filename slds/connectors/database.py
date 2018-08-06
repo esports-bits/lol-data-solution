@@ -189,7 +189,8 @@ class DataBase:
                                    database=self.mongo_static_data,
                                    split=g[1]['split'],
                                    season=g[1]['season']
-                                   ) for g in tqdm(df.iterrows(), total=df.shape[0])])
+                                   ) for g in tqdm(df.iterrows(), total=df.shape[0],
+                                                   desc='\tTransforming JSON into XLSX')])
         elif self.league == 'SCRIMS':
             return pd.concat([g2df(match=self.mongo_scrims_m_col.find_one({'platformId': g[1]['realm'],
                                                                            'gameId': g[1]['game_id']}, {'_id': 0}),
@@ -200,20 +201,23 @@ class DataBase:
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
                                    custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n'], blue_win=g[1]['blue_win'],
                                    database=self.mongo_static_data
-                                   ) for g in tqdm(df.iterrows(), total=df.shape[0])])
+                                   ) for g in tqdm(df.iterrows(), total=df.shape[0],
+                                                   desc='\tTransforming JSON into XLSX')])
         elif self.league == 'LCK':
             return pd.concat([g2df(match=None,
                                    timeline=None,
                                    week=g[1]['week'], custom=False,
                                    custom_positions=STANDARD_POSITIONS, database=self.mongo_static_data
-                                   ) for g in tqdm(df.iterrows())])
+                                   ) for g in tqdm(df.iterrows(), total=df.shape[0],
+                                                   desc='\tTransforming JSON into XLSX')])
         elif self.league == 'SOLOQ':
             return pd.concat([g2df(match=self.mongo_soloq_m_col.find_one({'platformId': gid[1][1],
                                                                           'gameId': int(gid[1][0])}, {'_id': 0}),
                                    timeline=self.mongo_soloq_tl_col.find_one({'platformId': gid[1][1],
                                                                               'gameId': str(gid[1][0])}, {'_id': 0}),
                                    custom=False, database=self.mongo_static_data
-                                   ) for gid in tqdm(df.iterrows(), total=df.shape[0])])
+                                   ) for gid in tqdm(df.iterrows(), total=df.shape[0],
+                                                     desc='\tTransforming JSON into XLSX')])
 
     def get_stored_game_ids(self, **kwargs):
         mongo_query = {}
