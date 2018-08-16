@@ -8,8 +8,8 @@ from riotwatcher import RiotWatcher
 from tqdm import tqdm
 from requests.exceptions import HTTPError
 from converters.data2files import get_runes_reforged_json
-from converters.data2frames import game_to_dataframe as g2df
-from converters.data2frames import get_soloq_dataframe, get_league_dataframe
+from converters.data2frames import game_to_dataframe as g2df, get_db_generic_dataframe
+from converters.data2frames import get_soloq_dataframe
 from datetime import datetime as dt, timedelta
 from config.constants import MONGODB_CONN, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
     STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, TOURNAMENT_GAME_ENDPOINT, EXPORTS_DIR, \
@@ -328,7 +328,7 @@ def parse_args(args, api_key):
             stored_game_ids = db.get_stored_game_ids(**kwargs)
             print('\t{} games found.'.format(len(stored_game_ids)))
             if league != SOLOQ:
-                info_df = get_league_dataframe(db.mongo_cnx.slds.get_collection(league.lower()))
+                info_df = get_db_generic_dataframe(db.mongo_cnx.slds.get_collection(league.lower()))
                 info_df['gid_realm'] = info_df.apply(lambda x: str(x['game_id']) + '_' + str(x['realm']), axis=1)
                 ls1 = [str(g[0]) + '_' + str(g[1]) for g in stored_game_ids]
                 df = info_df.loc[info_df['gid_realm'].isin(ls1)]
@@ -346,7 +346,7 @@ def parse_args(args, api_key):
 
             if args.pro_data:
                 print('\tGetting rid of non professional player\'s data.')
-                final_df = final_df[final_df.player_name.not_null()]
+                final_df = final_df[pd.notnull(final_df.player_name)]
 
             if args.output.upper() in AVAILABLE_OUTPUTS:
                 if args.output.upper() == 'XLSX':

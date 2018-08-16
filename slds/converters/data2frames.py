@@ -421,6 +421,6 @@ def get_soloq_dataframe(players_db):
         columns={'key': 'player_name'})
 
 
-def get_league_dataframe(db):
-    cursor = db.find({}, {'_id': 0})
-    return pd.concat([pd.DataFrame(record, index=(0,)) for record in cursor])
+def get_db_generic_dataframe(collection):
+    cursor = collection.find({}, {'_id': 0})
+    return pd.concat([pd.DataFrame(doc, columns=doc.keys(), index=[i]) for i, doc in enumerate(cursor)])
