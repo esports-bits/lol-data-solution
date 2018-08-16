@@ -139,3 +139,5 @@ RIFT_GAMES_QUEUES = [NORMAL_DRAFT_QUEUE_ID, SOLOQ_QUEUE_ID, NORMAL_BLIND_QUEUE_I
 
 DB_ITEMS = ['players', 'teams', 'competitions']
 DB_CHANGE_TYPE = ['add', 'edit', 'remove']
+
+AVAILABLE_OUTPUTS = ['XLSX', 'CSV', 'DB']

@@ -14,7 +14,7 @@ from datetime import datetime as dt, timedelta
 from config.constants import MONGODB_CONN, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
     STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, TOURNAMENT_GAME_ENDPOINT, EXPORTS_DIR, \
     RIFT_GAMES_QUEUES, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, \
-    DB_ITEMS, DB_CHANGE_TYPE
+    DB_ITEMS, DB_CHANGE_TYPE, AVAILABLE_OUTPUTS, CSV_EXPORT_PATH
 
 
 class DataBase:
@@ -329,12 +329,12 @@ def parse_args(args, api_key):
             print('\t{} games found.'.format(len(stored_game_ids)))
             if league != SOLOQ:
                 info_df = get_league_dataframe(db.mongo_cnx.slds.get_collection(league.lower()))
-                info_df['gid_realm'] = info_df.apply(lambda x: str(x['game_id']) + '_' + str(x['realm']),
-                                                             axis=1)
+                info_df['gid_realm'] = info_df.apply(lambda x: str(x['game_id']) + '_' + str(x['realm']), axis=1)
                 ls1 = [str(g[0]) + '_' + str(g[1]) for g in stored_game_ids]
                 df = info_df.loc[info_df['gid_realm'].isin(ls1)]
             else:
                 df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id', 1: 'realm'})
+
             concatenated_df = db.concat_games(df)
             final_df = concatenated_df
 
@@ -344,7 +344,23 @@ def parse_args(args, api_key):
                 final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
                                           how='left')
 
-            final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+            if args.pro_data:
+                print('\tGetting rid of non professional player\'s data.')
+                final_df = final_df[final_df.player_name.not_null()]
+
+            if args.output.upper() in AVAILABLE_OUTPUTS:
+                if args.output.upper() == 'XLSX':
+                    print('\tExporting into XLSX.')
+                    final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+                elif args.output.upper() == 'CSV':
+                    print('\tExporting into CSV.')
+                    final_df.to_csv(LEAGUES_DATA_DICT[league][CSV_EXPORT_PATH])
+                elif args.output.upper() == 'DB':
+                    print('\tExporting into DB.')
+                    coll = db.mongo_cnx.exports.get_collection(league.lower())
+                    coll.drop()
+                    coll.insert_many(final_df.to_dict(orient='records'))
+
             print('\tGames exported.')
 
     finally:
