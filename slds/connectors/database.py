@@ -8,13 +8,13 @@ from riotwatcher import RiotWatcher
 from tqdm import tqdm
 from requests.exceptions import HTTPError
 from converters.data2files import get_runes_reforged_json
-from converters.data2frames import game_to_dataframe as g2df
-from converters.data2frames import get_soloq_dataframe, get_league_dataframe
+from converters.data2frames import game_to_dataframe as g2df, get_db_generic_dataframe
+from converters.data2frames import get_soloq_dataframe
 from datetime import datetime as dt, timedelta
 from config.constants import MONGODB_CONN, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
     STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, TOURNAMENT_GAME_ENDPOINT, EXPORTS_DIR, \
     RIFT_GAMES_QUEUES, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, \
-    DB_ITEMS, DB_CHANGE_TYPE
+    DB_ITEMS, DB_CHANGE_TYPE, AVAILABLE_OUTPUTS, CSV_EXPORT_PATH
 
 
 class DataBase:
@@ -290,15 +290,15 @@ class DataBase:
         return None
 
     def save_static_data_files(self):
-        versions = {'versions': self.rw.static_data.versions(region=self.region), '_id': 'versions'}
-        self.mongo_static_data.replace_one(filter={'_id': 'versions'}, replacement=versions, upsert=True)
-        champs = self.rw.static_data.champions(region=self.region, version=versions['versions'][0])
+        # Versions
+        version = self.rw.data_dragon.versions_for_region(region=)['v']
+        champs = self.rw.static_data.champions(region=self.region, version=version)
         champs['_id'] = 'champions'
         self.mongo_static_data.replace_one(filter={'_id': 'champions'}, replacement=champs, upsert=True)
-        items = self.rw.static_data.items(region=self.region, version=versions['versions'][0])
+        items = self.rw.static_data.items(region=self.region, version=version)
         items['_id'] = 'items'
         self.mongo_static_data.replace_one(filter={'_id': 'items'}, replacement=items, upsert=True)
-        summs = self.rw.static_data.summoner_spells(region=self.region, version=versions['versions'][0])
+        summs = self.rw.static_data.summoner_spells(region=self.region, version=version)
         summs['_id'] = 'summoner_spells'
         self.mongo_static_data.replace_one(filter={'_id': 'summoner_spells'}, replacement=summs, upsert=True)
         runes = {'runes': get_runes_reforged_json(versions), '_id': 'runes_reforged'}
@@ -342,12 +342,13 @@ def parse_args(args, api_key):
             stored_game_ids = db.get_stored_game_ids(**kwargs)
             print('\t{} games found.'.format(len(stored_game_ids)))
             if league != SOLOQ:
-                info_df = get_league_dataframe(db.mongo_cnx.slds.get_collection(league.lower()))
+                info_df = get_db_generic_dataframe(db.mongo_cnx.slds.get_collection(league.lower()))
                 info_df['gid_realm'] = info_df.apply(lambda x: str(x['game_id']) + '_' + str(x['realm']), axis=1)
                 ls1 = [str(g[0]) + '_' + str(g[1]) for g in stored_game_ids]
                 df = info_df.loc[info_df['gid_realm'].isin(ls1)]
             else:
                 df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id', 1: 'realm'})
+
             concatenated_df = db.concat_games(df)
             final_df = concatenated_df
 
@@ -357,7 +358,23 @@ def parse_args(args, api_key):
                 final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
                                           how='left')
 
-            final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+            if args.pro_data:
+                print('\tGetting rid of non professional player\'s data.')
+                final_df = final_df[pd.notnull(final_df.player_name)]
+
+            outputs = args.output.upper().split(',')
+            if 'XLSX' in outputs:
+                print('\tExporting into XLSX.')
+                final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+            if 'CSV' in outputs:
+                print('\tExporting into CSV.')
+                final_df.to_csv(LEAGUES_DATA_DICT[league][CSV_EXPORT_PATH])
+            if 'DB' in outputs:
+                print('\tExporting into DB.')
+                coll = db.mongo_cnx.exports.get_collection(league.lower())
+                coll.drop()
+                coll.insert_many(final_df.to_dict(orient='records'))
+
             print('\tGames exported.')
 
     finally:

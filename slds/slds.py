@@ -1,6 +1,6 @@
 import argparse
 from connectors import filesystem, database
-from config.constants import SUPPORTED_LEAGUES, SUPPORTED_CONNECTORS, REGIONS, PATCH_PATTERN, API_KEY
+from config.constants import SUPPORTED_LEAGUES, SUPPORTED_CONNECTORS, REGIONS, PATCH_PATTERN, API_KEY, AVAILABLE_OUTPUTS
 
 
 def parse_args():
@@ -43,6 +43,10 @@ def parse_args():
     databases.add_argument('-s', '--split', help='Select the split [spring, summer]. {leagues data export only]')
     databases.add_argument('-S', '--season', help='Select the season [int]. {leagues data export only]')
     databases.add_argument('-R', '--region_filter', help='Select the region to download and export the data.')
+    databases.add_argument('-o', '--output', help='Choose between diferent kinds of outputs: {}'
+                           .format(AVAILABLE_OUTPUTS))
+    databases.add_argument('-pd', '--pro_data', help='Just export the data of the pro players registered in the DB.',
+                           action='store_true')
 
     return parser.parse_args()
 
@@ -76,6 +80,10 @@ def main():
             print('Patch format is incorrect. Should be something like this:  \'8.9.1\', \'8.9\', \'8\' '
                   '(withouth the \' symbols).')
             return
+
+    if not args.output:
+        args.output = 'XLSX'
+        print('No output selected. Default output will be used (XLSX).')
 
     if not args.connector:
         print('No connector selected. To select a connector write down one of the following names just after the '
