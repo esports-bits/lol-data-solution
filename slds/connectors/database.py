@@ -348,18 +348,18 @@ def parse_args(args, api_key):
                 print('\tGetting rid of non professional player\'s data.')
                 final_df = final_df[pd.notnull(final_df.player_name)]
 
-            if args.output.upper() in AVAILABLE_OUTPUTS:
-                if args.output.upper() == 'XLSX':
-                    print('\tExporting into XLSX.')
-                    final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
-                elif args.output.upper() == 'CSV':
-                    print('\tExporting into CSV.')
-                    final_df.to_csv(LEAGUES_DATA_DICT[league][CSV_EXPORT_PATH])
-                elif args.output.upper() == 'DB':
-                    print('\tExporting into DB.')
-                    coll = db.mongo_cnx.exports.get_collection(league.lower())
-                    coll.drop()
-                    coll.insert_many(final_df.to_dict(orient='records'))
+            outputs = args.output.upper().split(',')
+            if 'XLSX' in outputs:
+                print('\tExporting into XLSX.')
+                final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+            if 'CSV' in outputs:
+                print('\tExporting into CSV.')
+                final_df.to_csv(LEAGUES_DATA_DICT[league][CSV_EXPORT_PATH])
+            if 'DB' in outputs:
+                print('\tExporting into DB.')
+                coll = db.mongo_cnx.exports.get_collection(league.lower())
+                coll.drop()
+                coll.insert_many(final_df.to_dict(orient='records'))
 
             print('\tGames exported.')
 
