@@ -81,6 +81,10 @@ def main():
                   '(withouth the \' symbols).')
             return
 
+    if not args.output:
+        args.output = 'XLSX'
+        print('No output selected. Default output will be used (XLSX).')
+
     if not args.connector:
         print('No connector selected. To select a connector write down one of the following names just after the '
               'script call with region and league parameters set: {}. Something like that: \"python program.py '

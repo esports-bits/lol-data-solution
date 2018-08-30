@@ -276,15 +276,15 @@ class DataBase:
         return None
 
     def save_static_data_files(self):
-        versions = {'versions': self.rw.static_data.versions(region=self.region), '_id': 'versions'}
-        self.mongo_static_data.replace_one(filter={'_id': 'versions'}, replacement=versions, upsert=True)
-        champs = self.rw.static_data.champions(region=self.region, version=versions['versions'][0])
+        # Versions
+        version = self.rw.data_dragon.versions_for_region(region=)['v']
+        champs = self.rw.static_data.champions(region=self.region, version=version)
         champs['_id'] = 'champions'
         self.mongo_static_data.replace_one(filter={'_id': 'champions'}, replacement=champs, upsert=True)
-        items = self.rw.static_data.items(region=self.region, version=versions['versions'][0])
+        items = self.rw.static_data.items(region=self.region, version=version)
         items['_id'] = 'items'
         self.mongo_static_data.replace_one(filter={'_id': 'items'}, replacement=items, upsert=True)
-        summs = self.rw.static_data.summoner_spells(region=self.region, version=versions['versions'][0])
+        summs = self.rw.static_data.summoner_spells(region=self.region, version=version)
         summs['_id'] = 'summoner_spells'
         self.mongo_static_data.replace_one(filter={'_id': 'summoner_spells'}, replacement=summs, upsert=True)
         runes = {'runes': get_runes_reforged_json(versions), '_id': 'runes_reforged'}
