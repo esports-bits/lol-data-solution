@@ -291,7 +291,7 @@ class DataBase:
 
     def save_static_data_files(self):
         # Versions
-        version = self.rw.data_dragon.versions_for_region(region=)['v']
+        version = self.rw.data_dragon.versions_for_region(region=self.region)['v']
         champs = self.rw.static_data.champions(region=self.region, version=version)
         champs['_id'] = 'champions'
         self.mongo_static_data.replace_one(filter={'_id': 'champions'}, replacement=champs, upsert=True)
@@ -301,7 +301,7 @@ class DataBase:
         summs = self.rw.static_data.summoner_spells(region=self.region, version=version)
         summs['_id'] = 'summoner_spells'
         self.mongo_static_data.replace_one(filter={'_id': 'summoner_spells'}, replacement=summs, upsert=True)
-        runes = {'runes': get_runes_reforged_json(versions), '_id': 'runes_reforged'}
+        runes = {'runes': get_runes_reforged_json(version), '_id': 'runes_reforged'}
         self.mongo_static_data.replace_one(filter={'_id': 'runes_reforged'}, replacement=runes, upsert=True)
 
     def modify_item_in_db(self, item_type, change_type, item):
