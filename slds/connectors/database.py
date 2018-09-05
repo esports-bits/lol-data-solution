@@ -291,18 +291,20 @@ class DataBase:
 
     def save_static_data_files(self):
         # Versions
-        version = self.rw.data_dragon.versions_for_region(region=self.region)['v']
-        champs = self.rw.static_data.champions(region=self.region, version=version)
-        champs['_id'] = 'champions'
-        self.mongo_static_data.replace_one(filter={'_id': 'champions'}, replacement=champs, upsert=True)
-        items = self.rw.static_data.items(region=self.region, version=version)
-        items['_id'] = 'items'
-        self.mongo_static_data.replace_one(filter={'_id': 'items'}, replacement=items, upsert=True)
-        summs = self.rw.static_data.summoner_spells(region=self.region, version=version)
-        summs['_id'] = 'summoner_spells'
-        self.mongo_static_data.replace_one(filter={'_id': 'summoner_spells'}, replacement=summs, upsert=True)
-        runes = {'runes': get_runes_reforged_json(version), '_id': 'runes_reforged'}
-        self.mongo_static_data.replace_one(filter={'_id': 'runes_reforged'}, replacement=runes, upsert=True)
+        region = [k for k, v in REGIONS.items() if v == self.region][0].lower()
+        version = self.rw.data_dragon.versions_for_region(region=region)['v']
+        db_versions = self.mongo_static_data.find_one({'type': 'versions'})
+        if version not in db_versions['versions']:
+            db_versions['versions'].insert(0, version)
+            self.mongo_static_data.replace_one(filter={'type': 'versions'}, replacement=db_versions, upsert=True)
+        items = self.rw.data_dragon.items(version=version)
+        champs = self.rw.data_dragon.champions(version=version)
+        summs = self.rw.data_dragon.summoner_spells(version=version)
+        runes = {'runes': get_runes_reforged_json(version), 'type': 'runes'}
+        self.mongo_static_data.replace_one(filter={'type': 'champion'}, replacement=champs, upsert=True)
+        self.mongo_static_data.replace_one(filter={'type': 'item'}, replacement=items, upsert=True)
+        self.mongo_static_data.replace_one(filter={'type': 'summoner'}, replacement=summs, upsert=True)
+        self.mongo_static_data.replace_one(filter={'type': 'runes'}, replacement=runes, upsert=True)
 
     def modify_item_in_db(self, item_type, change_type, item):
         if item_type.lower() in DB_ITEMS and change_type.lower() in DB_CHANGE_TYPE:
