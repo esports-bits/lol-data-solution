@@ -63,9 +63,9 @@ def game_to_dataframe(match, timeline, **kwargs):
     ps_ids_df = game_participant_ids_to_dataframe(participant_ids, custom=kwargs['custom'])
     ps_df = game_participants_to_dataframe(participants)
     t_df = game_teams_to_dataframe(teams)
-    # tl_df = timeline_relevant_stats_to_dataframe(timeline)
+    tl_df = timeline_relevant_stats_to_dataframe(timeline)
 
-    df_concat = pd.concat([m_df, ps_ids_df, ps_df, t_df], axis=1)
+    df_concat = pd.concat([m_df, ps_ids_df, ps_df, t_df, tl_df], axis=1)
 
     if kwargs:
         df_result = export_dataset_kwargs(df_concat, kwargs)
@@ -279,20 +279,20 @@ def timeline_participant_stats_to_dataframe(timeline):
 
 def timeline_relevant_stats_to_dataframe(timeline):
     def timeto_stats_from_participant(p):
-        l4k = list(p.loc[p.totalGold >= 4000].head(1).frame)
-        l7k = list(p.loc[p.totalGold >= 7000].head(1).frame)
-        l50cs = list(p.loc[p.minionsKilled >= 50].head(1).frame)
-        l100cs = list(p.loc[p.minionsKilled >= 100].head(1).frame)
-        l50jcs = list(p.loc[p.jungleMinionsKilled >= 50].head(1).frame)
-        l100jcs = list(p.loc[p.jungleMinionsKilled >= 100].head(1).frame)
-        l50ccs = list(p.loc[p.minionsKilled + p.jungleMinionsKilled >= 50].head(1).frame)
-        l100ccs = list(p.loc[p.minionsKilled + p.jungleMinionsKilled >= 100].head(1).frame)
-        l6lvl = list(p.loc[p.level >= 6].head(1).frame)
-        l11lvl = list(p.loc[p.level >= 11].head(1).frame)
-        f5 = p.loc[p.frame == 5]
-        f10 = p.loc[p.frame == 10]
-        f15 = p.loc[p.frame == 15]
-        f20 = p.loc[p.frame == 20]
+        l4k = list(p[p.totalGold >= 4000].head(1).frame)
+        l7k = list(p[p.totalGold >= 7000].head(1).frame)
+        l50cs = list(p[p.minionsKilled >= 50].head(1).frame)
+        l100cs = list(p[p.minionsKilled >= 100].head(1).frame)
+        l50jcs = list(p[p.jungleMinionsKilled >= 50].head(1).frame)
+        l100jcs = list(p[p.jungleMinionsKilled >= 100].head(1).frame)
+        l50ccs = list(p[p.minionsKilled + p.jungleMinionsKilled >= 50].head(1).frame)
+        l100ccs = list(p[p.minionsKilled + p.jungleMinionsKilled >= 100].head(1).frame)
+        l6lvl = list(p[p.level >= 6].head(1).frame)
+        l11lvl = list(p[p.level >= 11].head(1).frame)
+        f5 = p[p.frame == 5]
+        f10 = p[p.frame == 10]
+        f15 = p[p.frame == 15]
+        f20 = p[p.frame == 20]
         g5 = list(f5.totalGold)
         g10 = list(f10.totalGold)
         g15 = list(f15.totalGold)
