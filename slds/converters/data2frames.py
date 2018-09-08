@@ -1,4 +1,3 @@
-import pickle
 from itertools import chain
 import pandas as pd
 import datetime
@@ -15,7 +14,6 @@ def game_to_dataframe(match, timeline, **kwargs):
         return "{h}:{m}:{s}".format(h=int(h), m=int(m), s=int(s))
 
     def ids_to_names(df, database=None):
-        # Champions
         if database is None:
             champs = champs_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='champions'))
             items = items_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='items'))

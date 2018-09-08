@@ -7,6 +7,8 @@ from itertools import chain
 from riotwatcher import RiotWatcher
 from tqdm import tqdm
 from requests.exceptions import HTTPError
+
+from connectors import dropbox_upload
 from converters.data2files import get_runes_reforged_json
 from converters.data2frames import game_to_dataframe as g2df, get_db_generic_dataframe
 from converters.data2frames import get_soloq_dataframe
@@ -376,6 +378,10 @@ def parse_args(args, api_key):
                 coll = db.mongo_cnx.exports.get_collection(league.lower())
                 coll.drop()
                 coll.insert_many(final_df.to_dict(orient='records'))
+            if 'DROPBOX' in outputs:
+                print('\tExporting into XLSX and uploading it to Dropbox.')
+                final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+                dropbox_upload.main('exports')
 
             print('\tGames exported.')
 
