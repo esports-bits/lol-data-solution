@@ -111,8 +111,5 @@ leagues_data/
 matches_raw_data/
 *.csv
 *.xlsx
-slds/msgbox.vbs
-*.xlsx#
 *.iml
-slds/tests.ipynb
-slds/db_test.ipynb
+*.ipynb

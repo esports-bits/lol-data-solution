@@ -7,19 +7,21 @@ from itertools import chain
 from riotwatcher import RiotWatcher
 from tqdm import tqdm
 from requests.exceptions import HTTPError
+
+from connectors import dropbox_upload
 from converters.data2files import get_runes_reforged_json
-from converters.data2frames import game_to_dataframe as g2df
-from converters.data2frames import get_soloq_dataframe, get_league_dataframe
+from converters.data2frames import game_to_dataframe as g2df, get_db_generic_dataframe
+from converters.data2frames import get_soloq_dataframe
 from datetime import datetime as dt, timedelta
-from config.constants import MONGODB_CONN, API_KEY, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
+from config.constants import MONGODB_CONN, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
     STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, TOURNAMENT_GAME_ENDPOINT, EXPORTS_DIR, \
-    RIFT_GAMES_QUEUES, SLO, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, \
-    DB_ITEMS, DB_CHANGE_TYPE
+    RIFT_GAMES_QUEUES, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, \
+    DB_ITEMS, DB_CHANGE_TYPE, AVAILABLE_OUTPUTS, CSV_EXPORT_PATH
 
 
 class DataBase:
-    def __init__(self, region, league):
-        self.rw = RiotWatcher(API_KEY)
+    def __init__(self, api_key, region, league):
+        self.rw = RiotWatcher(api_key)
         self.region = region
         self.league = league
         self.mongo_cnx = MongoClient(MONGODB_CONN)
@@ -27,6 +29,8 @@ class DataBase:
         self.mongo_soloq_tl_col = self.mongo_cnx.slds.soloq_tl
         self.mongo_slo_m_col = self.mongo_cnx.slds.slo_m
         self.mongo_slo_tl_col = self.mongo_cnx.slds.slo_tl
+        self.mongo_scrims_m_col = self.mongo_cnx.slds.scrims_m
+        self.mongo_scrims_tl_col = self.mongo_cnx.slds.scrims_tl
         self.mongo_static_data = self.mongo_cnx.slds.static_data
         self.mongo_players = self.mongo_cnx.slds.players
         self.mongo_teams = self.mongo_cnx.slds.teams
@@ -47,7 +51,7 @@ class DataBase:
             raw_data_coll_name = self.league.lower() + '_m'
             raw_data_coll = self.mongo_cnx.slds.get_collection(raw_data_coll_name)
             info_coll = self.mongo_cnx.slds.get_collection(self.league.lower())
-            cursor1 = info_coll.find({'season': 8, 'split': 'summer'}, {'_id': 0, 'game_id': 1, 'realm': 1, 'hash': 1})
+            cursor1 = info_coll.find({}, {'_id': 0, 'game_id': 1, 'realm': 1, 'hash': 1})
             new_game_ids = [(record['game_id'], record['realm'], record['hash']) for record in cursor1]
             cursor2 = raw_data_coll.find({}, {'_id': 0, 'gameId': 1, 'platformId': 1})
             current_game_ids = [(record['gameId'], record['platformId']) for record in cursor2]
@@ -84,7 +88,6 @@ class DataBase:
                 {
                     '$match': {'team_info.competition': competition}
                 }
-
             ])
         elif kwargs['region_filter'] is not None:
             print('\tLooking for account ids players competing in {}.'.format(kwargs['region_filter'].upper()
@@ -105,7 +108,7 @@ class DataBase:
         return [p['account_id'] for p in cursor]
 
     def get_new_ids(self, old, new):
-        if self.league == SLO:
+        if self.league != SOLOQ:
             return [gid for gid in new if (gid[0], gid[1]) not in old]
         return list(set(new) - set(old))
 
@@ -184,29 +187,39 @@ class DataBase:
                                    custom_positions=STANDARD_POSITIONS,
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom=(g[1]['hash'] is None),
-                                   week=g[1]['week'], database=self.mongo_static_data) for g in df.iterrows()])
+                                   week=g[1]['week'],
+                                   database=self.mongo_static_data,
+                                   split=g[1]['split'],
+                                   season=g[1]['season']
+                                   ) for g in tqdm(df.iterrows(), total=df.shape[0],
+                                                   desc='\tTransforming JSON into XLSX')])
         elif self.league == 'SCRIMS':
-            return pd.concat([g2df(match=None,
-                                   timeline=None,
+            return pd.concat([g2df(match=self.mongo_scrims_m_col.find_one({'platformId': g[1]['realm'],
+                                                                           'gameId': g[1]['game_id']}, {'_id': 0}),
+                                   timeline=self.mongo_scrims_tl_col.find_one({'platformId': str(g[1]['realm']),
+                                                                               'gameId': str(g[1]['game_id'])}),
                                    custom_positions=list(g[1][SCRIMS_POSITIONS_COLS]),
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
                                    custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n'], blue_win=g[1]['blue_win'],
                                    database=self.mongo_static_data
-                                   ) for g in df.iterrows()])
+                                   ) for g in tqdm(df.iterrows(), total=df.shape[0],
+                                                   desc='\tTransforming JSON into XLSX')])
         elif self.league == 'LCK':
             return pd.concat([g2df(match=None,
                                    timeline=None,
                                    week=g[1]['week'], custom=False,
                                    custom_positions=STANDARD_POSITIONS, database=self.mongo_static_data
-                                   ) for g in df.iterrows()])
+                                   ) for g in tqdm(df.iterrows(), total=df.shape[0],
+                                                   desc='\tTransforming JSON into XLSX')])
         elif self.league == 'SOLOQ':
             return pd.concat([g2df(match=self.mongo_soloq_m_col.find_one({'platformId': gid[1][1],
                                                                           'gameId': int(gid[1][0])}, {'_id': 0}),
                                    timeline=self.mongo_soloq_tl_col.find_one({'platformId': gid[1][1],
                                                                               'gameId': str(gid[1][0])}, {'_id': 0}),
                                    custom=False, database=self.mongo_static_data
-                                   ) for gid in df.iterrows()])
+                                   ) for gid in tqdm(df.iterrows(), total=df.shape[0],
+                                                     desc='\tTransforming JSON into XLSX')])
 
     def get_stored_game_ids(self, **kwargs):
         mongo_query = {}
@@ -219,6 +232,9 @@ class DataBase:
                 print('\tLooking for games played on patch {}.'.format(patch))
                 regex_patch = '^' + '{}'.format(patch).replace('.', r'\.')
                 mongo_query['gameVersion'] = {'$regex': regex_patch}
+            if kwargs['team_abbv'] is not None or kwargs['competition'] is not None:
+                acc_ids = self.get_account_ids(**kwargs)
+                mongo_query['participantIdentities.player.currentAccountId'] = {'$in': acc_ids}
             if kwargs['begin_time'] is not None:
                 print('\tLooking for games past {} at 00:00:00.'.format(kwargs['begin_time']))
                 timestamp = self.__str_date_to_timestamp(kwargs['begin_time'])
@@ -233,9 +249,6 @@ class DataBase:
                 except KeyError:
                     mongo_query['gameCreation'] = {}
                     mongo_query['gameCreation']['$lte'] = timestamp
-            if kwargs['team_abbv'] is not None or kwargs['competition'] is not None:
-                acc_ids = self.get_account_ids(**kwargs)
-                mongo_query['participantIdentities.player.currentAccountId'] = {'$in': acc_ids}
         else:
             game_id = 'game_id'
             realm = 'realm'
@@ -245,7 +258,21 @@ class DataBase:
                 mongo_query['split'] = kwargs['split']
             if kwargs['season']:
                 print('\tLooking for games played in season {}.'.format(kwargs['season']))
-                mongo_query['season'] = kwargs['season']
+                mongo_query['season'] = int(kwargs['season'])
+            if kwargs['begin_time'] is not None:
+                print('\tLooking for games past {} at 00:00:00.'.format(kwargs['begin_time']))
+                timestamp = self.__str_date_to_timestamp(kwargs['begin_time'])
+                mongo_query['timestamp'] = {}
+                mongo_query['timestamp']['$gte'] = timestamp
+            if kwargs['end_time'] is not None:
+                print('\tLooking for games before {} at 23:59:59.'.format(kwargs['end_time']))
+                td1 = timedelta(hours=23, minutes=59, seconds=59)
+                timestamp = self.__str_date_to_timestamp(kwargs['end_time'], td1)
+                try:
+                    mongo_query['timestamp']['$lte'] = timestamp
+                except KeyError:
+                    mongo_query['timestamp'] = {}
+                    mongo_query['timestamp']['$lte'] = timestamp
 
         games = coll.find(mongo_query, {'_id': 0, game_id: 1, realm: 1})
         return [(g[game_id], g[realm]) for g in games]
@@ -265,19 +292,21 @@ class DataBase:
         return None
 
     def save_static_data_files(self):
-        versions = {'versions': self.rw.static_data.versions(region=self.region), '_id': 'versions'}
-        self.mongo_static_data.replace_one(filter={'_id': 'versions'}, replacement=versions, upsert=True)
-        champs = self.rw.static_data.champions(region=self.region, version=versions['versions'][0])
-        champs['_id'] = 'champions'
-        self.mongo_static_data.replace_one(filter={'_id': 'champions'}, replacement=champs, upsert=True)
-        items = self.rw.static_data.items(region=self.region, version=versions['versions'][0])
-        items['_id'] = 'items'
-        self.mongo_static_data.replace_one(filter={'_id': 'items'}, replacement=items, upsert=True)
-        summs = self.rw.static_data.summoner_spells(region=self.region, version=versions['versions'][0])
-        summs['_id'] = 'summoner_spells'
-        self.mongo_static_data.replace_one(filter={'_id': 'summoner_spells'}, replacement=summs, upsert=True)
-        runes = {'runes': get_runes_reforged_json(versions), '_id': 'runes_reforged'}
-        self.mongo_static_data.replace_one(filter={'_id': 'runes_reforged'}, replacement=runes, upsert=True)
+        # Versions
+        region = [k for k, v in REGIONS.items() if v == self.region][0].lower()
+        version = self.rw.data_dragon.versions_for_region(region=region)['v']
+        db_versions = self.mongo_static_data.find_one({'type': 'versions'})
+        if version not in db_versions['versions']:
+            db_versions['versions'].insert(0, version)
+            self.mongo_static_data.replace_one(filter={'type': 'versions'}, replacement=db_versions, upsert=True)
+        items = self.rw.data_dragon.items(version=version)
+        champs = self.rw.data_dragon.champions(version=version)
+        summs = self.rw.data_dragon.summoner_spells(version=version)
+        runes = {'runes': get_runes_reforged_json(version), 'type': 'runes'}
+        self.mongo_static_data.replace_one(filter={'type': 'champion'}, replacement=champs, upsert=True)
+        self.mongo_static_data.replace_one(filter={'type': 'item'}, replacement=items, upsert=True)
+        self.mongo_static_data.replace_one(filter={'type': 'summoner'}, replacement=summs, upsert=True)
+        self.mongo_static_data.replace_one(filter={'type': 'runes'}, replacement=runes, upsert=True)
 
     def modify_item_in_db(self, item_type, change_type, item):
         if item_type.lower() in DB_ITEMS and change_type.lower() in DB_CHANGE_TYPE:
@@ -295,12 +324,12 @@ def create_dirs():
         os.makedirs(EXPORTS_DIR)
 
 
-def parse_args(args):
+def parse_args(args, api_key):
     create_dirs()
     kwargs = vars(args)
     region = REGIONS[args.region.upper()]
     league = args.league.upper()
-    db = DataBase(region, league)
+    db = DataBase(api_key, region, league)
     try:
         if args.update_static_data:
             db.save_static_data_files()
@@ -317,13 +346,13 @@ def parse_args(args):
             stored_game_ids = db.get_stored_game_ids(**kwargs)
             print('\t{} games found.'.format(len(stored_game_ids)))
             if league != SOLOQ:
-                info_df = get_league_dataframe(db.mongo_cnx.slds.get_collection(league.lower()))
-                info_df['gid_realm'] = info_df.apply(lambda x: str(x['game_id']) + '_' + str(x['realm']),
-                                                             axis=1)
+                info_df = get_db_generic_dataframe(db.mongo_cnx.slds.get_collection(league.lower()))
+                info_df['gid_realm'] = info_df.apply(lambda x: str(x['game_id']) + '_' + str(x['realm']), axis=1)
                 ls1 = [str(g[0]) + '_' + str(g[1]) for g in stored_game_ids]
                 df = info_df.loc[info_df['gid_realm'].isin(ls1)]
             else:
                 df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id', 1: 'realm'})
+
             concatenated_df = db.concat_games(df)
             final_df = concatenated_df
 
@@ -333,7 +362,27 @@ def parse_args(args):
                 final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
                                           how='left')
 
-            final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+            if args.pro_data:
+                print('\tGetting rid of non professional player\'s data.')
+                final_df = final_df[pd.notnull(final_df.player_name)]
+
+            outputs = args.output.upper().split(',')
+            if 'XLSX' in outputs:
+                print('\tExporting into XLSX.')
+                final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+            if 'CSV' in outputs:
+                print('\tExporting into CSV.')
+                final_df.to_csv(LEAGUES_DATA_DICT[league][CSV_EXPORT_PATH])
+            if 'DB' in outputs:
+                print('\tExporting into DB.')
+                coll = db.mongo_cnx.exports.get_collection(league.lower())
+                coll.drop()
+                coll.insert_many(final_df.to_dict(orient='records'))
+            if 'DROPBOX' in outputs:
+                print('\tExporting into XLSX and uploading it to Dropbox.')
+                final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+                dropbox_upload.main('exports')
+
             print('\tGames exported.')
 
     finally:

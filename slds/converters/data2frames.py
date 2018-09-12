@@ -1,4 +1,3 @@
-import pickle
 from itertools import chain
 import pandas as pd
 import datetime
@@ -15,19 +14,19 @@ def game_to_dataframe(match, timeline, **kwargs):
         return "{h}:{m}:{s}".format(h=int(h), m=int(m), s=int(s))
 
     def ids_to_names(df, database=None):
-        # Champions
         if database is None:
             champs = champs_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='champions'))
             items = items_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='items'))
             summs = summs_to_dataframe(read_json(save_dir=STATIC_DATA_DIR, file_name='summoners'))
             runes = runes_reforged_to_dataframe()
         else:
-            champs = champs_to_dataframe(database.find_one({'_id': 'champions'}, {'_id': 0}))
-            items = items_to_dataframe(database.find_one({'_id': 'items'}, {'_id': 0}))
-            summs = summs_to_dataframe(database.find_one({'_id': 'summoner_spells'}, {'_id': 0}))
-            runes = runes_reforged_to_dataframe(data=database.find_one({'_id': 'runes_reforged'}, {'_id': 0})['runes'])
+            champs = champs_to_dataframe(database.find_one({'type': 'champion'}, {'_id': 0}))
+            items = items_to_dataframe(database.find_one({'type': 'item'}, {'_id': 0}))
+            summs = summs_to_dataframe(database.find_one({'type': 'summoner'}, {'_id': 0}))
+            runes = runes_reforged_to_dataframe(data=database.find_one({'type': 'runes'}, {'_id': 0})['runes'])
+
         df1 = df.merge(
-            champs.rename(columns={'name': 'champ_name'}), left_on='championId', right_on='id').drop('id', axis=1)
+            champs.rename(columns={'name': 'champ_name'}), left_on='championId', right_on='key').drop('key', axis=1)
         # Items
         df2 = df1
         for name in ITEMS_COLS:
@@ -37,7 +36,7 @@ def game_to_dataframe(match, timeline, **kwargs):
         df3 = df2
         for name in SUMMS_COLS:
             df3 = df3.merge(summs.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
-                            right_on='id', how='left').drop('id', axis=1)
+                            right_on='key', how='left').drop('key', axis=1)
         # Runes
         df4 = df3
         try:
@@ -50,7 +49,7 @@ def game_to_dataframe(match, timeline, **kwargs):
         df5 = df4
         for name in BANS_COLS:
             df5 = df5.merge(champs.rename(columns={'name': '{}_name'.format(name)}), left_on='{}'.format(name),
-                            right_on='id', how='left').drop('id', axis=1)
+                            right_on='key', how='left').drop('key', axis=1)
 
         return df5
 
@@ -270,26 +269,28 @@ def timeline_participant_stats_to_dataframe(timeline):
     tl_frames = timeline['frames']
     tl_participants = [frame['participantFrames'] for frame in tl_frames]
     tl_ps_df = pd.concat(
-        [pd.DataFrame(stats, index=(i,)) for i, p in enumerate(tl_participants) for p_id, stats in p.items()])
+        [pd.DataFrame(stats, index=(i,))
+         for i, p in enumerate(tl_participants)
+         for p_id, stats in p.items()])
     return tl_ps_df.reset_index().rename(columns={'index': 'frame'})
 
 
 def timeline_relevant_stats_to_dataframe(timeline):
     def timeto_stats_from_participant(p):
-        l4k = list(p.loc[p.totalGold >= 4000].head(1).frame)
-        l7k = list(p.loc[p.totalGold >= 7000].head(1).frame)
-        l50cs = list(p.loc[p.minionsKilled >= 50].head(1).frame)
-        l100cs = list(p.loc[p.minionsKilled >= 100].head(1).frame)
-        l50jcs = list(p.loc[p.jungleMinionsKilled >= 50].head(1).frame)
-        l100jcs = list(p.loc[p.jungleMinionsKilled >= 100].head(1).frame)
-        l50ccs = list(p.loc[p.minionsKilled + p.jungleMinionsKilled >= 50].head(1).frame)
-        l100ccs = list(p.loc[p.minionsKilled + p.jungleMinionsKilled >= 100].head(1).frame)
-        l6lvl = list(p.loc[p.level >= 6].head(1).frame)
-        l11lvl = list(p.loc[p.level >= 11].head(1).frame)
-        f5 = p.loc[p.frame == 5]
-        f10 = p.loc[p.frame == 10]
-        f15 = p.loc[p.frame == 15]
-        f20 = p.loc[p.frame == 20]
+        l4k = list(p[p.totalGold >= 4000].head(1).frame)
+        l7k = list(p[p.totalGold >= 7000].head(1).frame)
+        l50cs = list(p[p.minionsKilled >= 50].head(1).frame)
+        l100cs = list(p[p.minionsKilled >= 100].head(1).frame)
+        l50jcs = list(p[p.jungleMinionsKilled >= 50].head(1).frame)
+        l100jcs = list(p[p.jungleMinionsKilled >= 100].head(1).frame)
+        l50ccs = list(p[p.minionsKilled + p.jungleMinionsKilled >= 50].head(1).frame)
+        l100ccs = list(p[p.minionsKilled + p.jungleMinionsKilled >= 100].head(1).frame)
+        l6lvl = list(p[p.level >= 6].head(1).frame)
+        l11lvl = list(p[p.level >= 11].head(1).frame)
+        f5 = p[p.frame == 5]
+        f10 = p[p.frame == 10]
+        f15 = p[p.frame == 15]
+        f20 = p[p.frame == 20]
         g5 = list(f5.totalGold)
         g10 = list(f10.totalGold)
         g15 = list(f15.totalGold)
@@ -380,15 +381,21 @@ def runes_reforged_to_dataframe(data=None):
 
 
 def items_to_dataframe(items):
-    return pd.DataFrame(items['data']).T.reset_index(drop=True)[STATIC_DATA_RELEVANT_COLS]
+    df = pd.DataFrame(items['data']).T.reset_index().rename(columns={'index': 'id'})[['id', 'name']]
+    df['id'] = df.id.astype(int)
+    return df
 
 
 def champs_to_dataframe(champs):
-    return pd.DataFrame(champs['data']).T.reset_index(drop=True)[STATIC_DATA_RELEVANT_COLS]
+    df = pd.DataFrame(champs['data']).T.reset_index(drop=True)[['key', 'name']]
+    df['key'] = df.key.astype(int)
+    return df
 
 
 def summs_to_dataframe(summs):
-    return pd.DataFrame(summs['data']).T.reset_index(drop=True)[STATIC_DATA_RELEVANT_COLS]
+    df = pd.DataFrame(summs['data']).T.reset_index(drop=True)[['key', 'name']]
+    df['key'] = df.key.astype(int)
+    return df
 
 
 def get_soloq_dataframe(players_db):
@@ -420,6 +427,6 @@ def get_soloq_dataframe(players_db):
         columns={'key': 'player_name'})
 
 
-def get_league_dataframe(db):
-    cursor = db.find({}, {'_id': 0})
-    return pd.concat([pd.DataFrame(record, index=(0,)) for record in cursor])
+def get_db_generic_dataframe(collection):
+    cursor = collection.find({}, {'_id': 0})
+    return pd.concat([pd.DataFrame(doc, columns=doc.keys(), index=[i]) for i, doc in enumerate(cursor)])
