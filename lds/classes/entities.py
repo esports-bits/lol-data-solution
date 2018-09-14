@@ -17,6 +17,7 @@ class Player:
         region = REGIONS[self.region.upper()]
         summoner = self.rw.summoner.by_name(summoner_name=self.summoner_name, region=region)
         result = {
+            'name': self.player_name,
             'summoner_name': self.summoner_name,
             'region': region,
             'main_role': self.main_role,
@@ -25,7 +26,7 @@ class Player:
             'account_type': self.account_type,
             'account_id': summoner['accountId'],
             'id': summoner['id'],
-            'key': self.player_name
+            'key': region + str(summoner['accountId'])
         }
         return result
 

@@ -113,3 +113,4 @@ matches_raw_data/
 *.xlsx
 *.iml
 *.ipynb
+lds/config/constants.py

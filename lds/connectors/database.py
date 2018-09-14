@@ -7,7 +7,6 @@ from itertools import chain
 from riotwatcher import RiotWatcher
 from tqdm import tqdm
 from requests.exceptions import HTTPError
-
 from connectors import dropbox_upload
 from converters.data2files import get_runes_reforged_json
 from converters.data2frames import game_to_dataframe as g2df, get_db_generic_dataframe
@@ -16,7 +15,7 @@ from datetime import datetime as dt, timedelta
 from config.constants import MONGODB_CONN, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
     STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, TOURNAMENT_GAME_ENDPOINT, EXPORTS_DIR, \
     RIFT_GAMES_QUEUES, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, \
-    DB_ITEMS, DB_CHANGE_TYPE, AVAILABLE_OUTPUTS, CSV_EXPORT_PATH
+    DB_ITEMS, DB_CHANGE_TYPE, CSV_EXPORT_PATH
 
 
 class DataBase:
