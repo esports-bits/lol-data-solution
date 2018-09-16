@@ -424,7 +424,7 @@ def get_soloq_dataframe(players_db):
     ])
     return pd.concat([pd.DataFrame(p, index=(0,)) for p in
                       [transform_soloq_player_data_for_dataframe(player) for player in cursor]]).rename(
-        columns={'key': 'player_name'})
+        columns={'name': 'player_name'})
 
 
 def get_db_generic_dataframe(collection):
