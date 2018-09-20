@@ -47,6 +47,10 @@ def parse_args():
                            .format(AVAILABLE_OUTPUTS))
     databases.add_argument('-pd', '--pro_data', help='Just export the data of the pro players registered in the DB.',
                            action='store_true')
+    databases.add_argument('-fn', '--file_name', help='Choose the name of the exported file.')
+    databases.add_argument('-tl', '--timeline', action='store_true', help='Add timeline data such as time to get level '
+                                                                          '6, 11; wards killed and placed per type; '
+                                                                          'etc...')
 
     return parser.parse_args()
 
