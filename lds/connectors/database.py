@@ -38,9 +38,7 @@ class DataBase:
 
     def get_old_and_new_game_ids(self, **kwargs):
         if self.league == 'SOLOQ':
-            cursor = self.mongo_soloq_m_col.find({'platformId': self.region.upper()}, {'_id': 0,
-                                                                                       'gameId': 1,
-                                                                                       'platformId': 1})
+            cursor = self.mongo_soloq_m_col.find({}, {'_id': 0, 'gameId': 1, 'platformId': 1})
             current_game_ids = [(gid['gameId'], gid['platformId']) for gid in cursor]
             acc_ids = self.get_account_ids(**kwargs)
             print('\t{} account ids found.'.format(len(acc_ids)))
@@ -175,7 +173,7 @@ class DataBase:
         cursor = self.mongo_teams.find({}, {'_id': 0, 'key': 1})
         return [abbv[0] for abbv in cursor]
 
-    def concat_games(self, df):
+    def concat_games(self, df, tl):
         if self.league == 'SLO':
             return pd.concat([g2df(match=self.mongo_slo_m_col.find_one({'platformId': g[1]['realm'],
                                                                         'gameId': g[1]['game_id']}, {'_id': 0}),
@@ -189,7 +187,8 @@ class DataBase:
                                    week=g[1]['week'],
                                    database=self.mongo_static_data,
                                    split=g[1]['split'],
-                                   season=g[1]['season']
+                                   season=g[1]['season'],
+                                   tl=tl
                                    ) for g in tqdm(df.iterrows(), total=df.shape[0],
                                                    desc='\tTransforming JSON into XLSX')])
         elif self.league == 'SCRIMS':
@@ -201,14 +200,14 @@ class DataBase:
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
                                    custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n'], blue_win=g[1]['blue_win'],
-                                   database=self.mongo_static_data
+                                   database=self.mongo_static_data, tl=tl
                                    ) for g in tqdm(df.iterrows(), total=df.shape[0],
                                                    desc='\tTransforming JSON into XLSX')])
         elif self.league == 'LCK':
             return pd.concat([g2df(match=None,
                                    timeline=None,
                                    week=g[1]['week'], custom=False,
-                                   custom_positions=STANDARD_POSITIONS, database=self.mongo_static_data
+                                   custom_positions=STANDARD_POSITIONS, database=self.mongo_static_data, tl=tl
                                    ) for g in tqdm(df.iterrows(), total=df.shape[0],
                                                    desc='\tTransforming JSON into XLSX')])
         elif self.league == 'SOLOQ':
@@ -216,7 +215,7 @@ class DataBase:
                                                                           'gameId': int(gid[1][0])}, {'_id': 0}),
                                    timeline=self.mongo_soloq_tl_col.find_one({'platformId': gid[1][1],
                                                                               'gameId': str(gid[1][0])}, {'_id': 0}),
-                                   custom=False, database=self.mongo_static_data
+                                   custom=False, database=self.mongo_static_data, tl=tl
                                    ) for gid in tqdm(df.iterrows(), total=df.shape[0],
                                                      desc='\tTransforming JSON into XLSX')])
 
@@ -352,7 +351,7 @@ def parse_args(args, api_key):
             else:
                 df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id', 1: 'realm'})
 
-            concatenated_df = db.concat_games(df)
+            concatenated_df = db.concat_games(df, tl=args.timeline)
             final_df = concatenated_df
 
             # Merge Solo Q players info with data
@@ -368,10 +367,16 @@ def parse_args(args, api_key):
             outputs = args.output.upper().split(',')
             if 'XLSX' in outputs:
                 print('\tExporting into XLSX.')
-                final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+                if kwargs['file_name'] is not None:
+                    final_df.to_excel(EXPORTS_DIR + kwargs['file_name'] + '.xlsx')
+                else:
+                    final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
             if 'CSV' in outputs:
                 print('\tExporting into CSV.')
-                final_df.to_csv(LEAGUES_DATA_DICT[league][CSV_EXPORT_PATH])
+                if kwargs['file_name'] is not None:
+                    final_df.to_excel(EXPORTS_DIR + kwargs['file_name'] + '.csv')
+                else:
+                    final_df.to_csv(LEAGUES_DATA_DICT[league][CSV_EXPORT_PATH])
             if 'DB' in outputs:
                 print('\tExporting into DB.')
                 coll = db.mongo_cnx.exports.get_collection(league.lower())
@@ -379,7 +384,10 @@ def parse_args(args, api_key):
                 coll.insert_many(final_df.to_dict(orient='records'))
             if 'DROPBOX' in outputs:
                 print('\tExporting into XLSX and uploading it to Dropbox.')
-                final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+                if kwargs['file_name'] is not None:
+                    final_df.to_excel(EXPORTS_DIR + kwargs['file_name'] + '.xlsx')
+                else:
+                    final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
                 dropbox_upload.main('exports')
 
             print('\tGames exported.')

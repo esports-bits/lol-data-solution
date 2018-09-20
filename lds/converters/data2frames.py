@@ -61,9 +61,11 @@ def game_to_dataframe(match, timeline, **kwargs):
     ps_ids_df = game_participant_ids_to_dataframe(participant_ids, custom=kwargs['custom'])
     ps_df = game_participants_to_dataframe(participants)
     t_df = game_teams_to_dataframe(teams)
-    tl_df = timeline_relevant_stats_to_dataframe(timeline)
-
-    df_concat = pd.concat([m_df, ps_ids_df, ps_df, t_df, tl_df], axis=1)
+    if kwargs['tl']:
+        tl_df = timeline_relevant_stats_to_dataframe(timeline)
+        df_concat = pd.concat([m_df, ps_ids_df, ps_df, t_df, tl_df], axis=1)
+    else:
+        df_concat = pd.concat([m_df, ps_ids_df, ps_df, t_df], axis=1)
 
     if kwargs:
         df_result = export_dataset_kwargs(df_concat, kwargs)
