@@ -9,7 +9,7 @@ from tqdm import tqdm
 from requests.exceptions import HTTPError
 from connectors import dropbox_upload
 from converters.data2files import get_runes_reforged_json
-from converters.data2frames import game_to_dataframe as g2df, get_db_generic_dataframe
+from converters.data2frames import game_to_dataframe as g2df, get_db_generic_dataframe, clean_export_dataframe
 from converters.data2frames import get_soloq_dataframe
 from datetime import datetime as dt, timedelta
 from config.constants import MONGODB_CONN, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
@@ -35,6 +35,7 @@ class DataBase:
         self.mongo_teams = self.mongo_cnx.slds.teams
         self.mongo_competitions = self.mongo_cnx.slds.competitions
         self.mongo_slo = self.mongo_cnx.slds.slo
+        self.excel_exported_flag = False
 
     def get_old_and_new_game_ids(self, **kwargs):
         if self.league == 'SOLOQ':
@@ -352,7 +353,7 @@ def parse_args(args, api_key):
                 df = pd.DataFrame(stored_game_ids).rename(columns={0: 'game_id', 1: 'realm'})
 
             concatenated_df = db.concat_games(df, tl=args.timeline)
-            final_df = concatenated_df
+            final_df = clean_export_dataframe(concatenated_df)
 
             # Merge Solo Q players info with data
             if league == SOLOQ:
@@ -371,6 +372,7 @@ def parse_args(args, api_key):
                     final_df.to_excel(EXPORTS_DIR + kwargs['file_name'] + '.xlsx')
                 else:
                     final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+                db.excel_exported_flag = True
             if 'CSV' in outputs:
                 print('\tExporting into CSV.')
                 if kwargs['file_name'] is not None:
@@ -378,16 +380,14 @@ def parse_args(args, api_key):
                 else:
                     final_df.to_csv(LEAGUES_DATA_DICT[league][CSV_EXPORT_PATH])
             if 'DB' in outputs:
-                print('\tExporting into DB.')
-                coll = db.mongo_cnx.exports.get_collection(league.lower())
-                coll.drop()
-                coll.insert_many(final_df.to_dict(orient='records'))
-            if 'DROPBOX' in outputs:
-                print('\tExporting into XLSX and uploading it to Dropbox.')
-                if kwargs['file_name'] is not None:
+                if kwargs['file_name'] is not None and db.excel_exported_flag is False:
+                    print('\tExporting into XLSX and uploading it to Dropbox.')
                     final_df.to_excel(EXPORTS_DIR + kwargs['file_name'] + '.xlsx')
-                else:
+                elif kwargs['file_name'] is None and db.excel_exported_flag is False:
+                    print('\tExporting into XLSX and uploading it to Dropbox.')
                     final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
+                else:
+                    print('\tUploading the dataset to Dropbox.')
                 dropbox_upload.main('exports')
 
             print('\tGames exported.')

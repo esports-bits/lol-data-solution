@@ -1,5 +1,5 @@
 import dropbox
-from config.constants import DROPBOX_TOKEN, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, SOLOQ_REPORT
+from config.constants import DROPBOX_TOKEN, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, SOLOQ_REPORT, EXPORTS_DIR
 
 
 class TransferData:
@@ -13,12 +13,16 @@ class TransferData:
             dbx.files_upload(f.read(), file_to, mode=dropbox.files.WriteMode.overwrite)
 
 
-def main(dest_folder):
+def main(dest_folder, file_name=None):
     access_token = DROPBOX_TOKEN
     transfer_data = TransferData(access_token)
 
-    file_from = '{}'.format(LEAGUES_DATA_DICT[SOLOQ_REPORT][EXCEL_EXPORT_PATH])
-    file_to = '/{dest}/soloq_report.xlsx'.format(dest=dest_folder)
+    if file_name is not None:
+        file_from = '{}'.format(EXPORTS_DIR + file_name + '.xlsx')
+    else:
+        file_from = '{}'.format(LEAGUES_DATA_DICT[SOLOQ_REPORT][EXCEL_EXPORT_PATH])
+        file_name = 'soloq_dataset'
+    file_to = '/{dest}/{file}.xlsx'.format(dest=dest_folder, file=file_name)
 
     transfer_data.upload_file(file_from, file_to)
 

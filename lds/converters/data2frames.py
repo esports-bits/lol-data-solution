@@ -432,3 +432,24 @@ def get_soloq_dataframe(players_db):
 def get_db_generic_dataframe(collection):
     cursor = collection.find({}, {'_id': 0})
     return pd.concat([pd.DataFrame(doc, columns=doc.keys(), index=[i]) for i, doc in enumerate(cursor)])
+
+
+def clean_export_dataframe(df):
+    def set_side(x):
+        if x == 100:
+            return 'Blue'
+        elif x == 200:
+            return 'Red'
+
+    df['side'] = df.teamId_team.apply(set_side)
+    
+    ban_cols = [col for col in df.columns if 'ban' in col and 'name' not in col]
+    diff_cols = [col for col in df.columns if 'diff' in col]
+    id_cols = ['championId', 'mapId', 'seasonId', 'spell1Id', 'spell2Id', 'teamId']
+    team_cols = ['dominionVictoryScore_team', 'vilemawKills_team', 'teamId_team']
+    score_cols = [col for col in df.columns if 'Score' in col and 'vision' not in col]
+    perk_cols = [col for col in df.columns if 'perk' in col and 'Var' not in col and 'name' not in col]
+    item_cols = [col for col in df.columns if 'item' in col and 'name' not in col]
+    pm_cols = [col for col in df.columns if 'pm' in col]
+
+    return df.drop(ban_cols + id_cols + diff_cols + team_cols + score_cols + perk_cols + item_cols + pm_cols, axis=1)
