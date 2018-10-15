@@ -28,6 +28,8 @@ class DataBase:
         self.mongo_soloq_tl_col = self.mongo_cnx.slds.soloq_tl
         self.mongo_slo_m_col = self.mongo_cnx.slds.slo_m
         self.mongo_slo_tl_col = self.mongo_cnx.slds.slo_tl
+        self.mongo_lck_m_col = self.mongo_cnx.slds.lck_m
+        self.mongo_lck_tl_col = self.mongo_cnx.slds.lck_tl
         self.mongo_scrims_m_col = self.mongo_cnx.slds.scrims_m
         self.mongo_scrims_tl_col = self.mongo_cnx.slds.scrims_tl
         self.mongo_static_data = self.mongo_cnx.slds.static_data
@@ -205,8 +207,11 @@ class DataBase:
                                    ) for g in tqdm(df.iterrows(), total=df.shape[0],
                                                    desc='\tTransforming JSON into XLSX')])
         elif self.league == 'LCK':
-            return pd.concat([g2df(match=None,
-                                   timeline=None,
+            return pd.concat([g2df(match=self.mongo_lck_m_col.find_one({'platformId': g[1]['realm'],
+                                                                        'gameId': g[1]['game_id']}, {'_id': 0}),
+                                   timeline=self.mongo_lck_tl_col.find_one({'platformId': str(g[1]['realm']),
+                                                                            'gameId': str(g[1]['game_id'])},
+                                                                           {'_id': 0}),
                                    week=g[1]['week'], custom=False,
                                    custom_positions=STANDARD_POSITIONS, database=self.mongo_static_data, tl=tl
                                    ) for g in tqdm(df.iterrows(), total=df.shape[0],
