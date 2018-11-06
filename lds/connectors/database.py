@@ -393,7 +393,7 @@ def parse_args(args, api_key):
                     final_df.to_excel(LEAGUES_DATA_DICT[league][EXCEL_EXPORT_PATH])
                 else:
                     print('\tUploading the dataset to Dropbox.')
-                dropbox_upload.main('exports')
+                dropbox_upload.main('exports', file_name=kwargs['file_name'])
 
             print('\tGames exported.')
 
