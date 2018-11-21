@@ -1,6 +1,7 @@
 # LoL Data Solution
 
 # Dependencies
+* [Riot Games API](https://developer.riotgames.com/).
 * [RiotWatcher](https://riot-watcher.readthedocs.io/en/latest/).
 * [MongoDB](https://www.mongodb.com).
 
