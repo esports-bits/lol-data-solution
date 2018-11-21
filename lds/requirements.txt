@@ -1,0 +1,9 @@
+pymongo
+pandas=0.20.1
+tqdm
+riotwatcher
+requests
+numpy
+dnspython
+wtforms
+dropbox

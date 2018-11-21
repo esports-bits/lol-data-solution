@@ -109,3 +109,8 @@ slo_games/
 exports/
 leagues_data/
 matches_raw_data/
+*.csv
+*.xlsx
+*.iml
+*.ipynb
+lds/config/constants.py

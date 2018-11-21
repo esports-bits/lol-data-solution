@@ -1,5 +1,0 @@
-pandas
-tqdm
-riotwatcher
-requests
-numpy
