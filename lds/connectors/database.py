@@ -2,6 +2,7 @@ import os
 import urllib.request
 import json
 import pandas as pd
+import numpy as np
 from pymongo import MongoClient
 from itertools import chain
 from riotwatcher import RiotWatcher
@@ -15,7 +16,7 @@ from datetime import datetime as dt, timedelta
 from config.constants import MONGODB_CONN, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_COLS, \
     STANDARD_POSITIONS, SCRIMS_POSITIONS_COLS, TOURNAMENT_GAME_ENDPOINT, EXPORTS_DIR, \
     RIFT_GAMES_QUEUES, TOURNAMENT_TL_ENDPOINT, LEAGUES_DATA_DICT, EXCEL_EXPORT_PATH, \
-    DB_ITEMS, DB_CHANGE_TYPE, CSV_EXPORT_PATH
+    DB_ITEMS, DB_CHANGE_TYPE, CSV_EXPORT_PATH, PRO
 
 
 class DataBase:
@@ -28,8 +29,8 @@ class DataBase:
         self.mongo_soloq_tl_col = self.mongo_cnx.slds.soloq_tl
         self.mongo_slo_m_col = self.mongo_cnx.slds.slo_m
         self.mongo_slo_tl_col = self.mongo_cnx.slds.slo_tl
-        self.mongo_lck_m_col = self.mongo_cnx.slds.lck_m
-        self.mongo_lck_tl_col = self.mongo_cnx.slds.lck_tl
+        self.mongo_pro_m_col = self.mongo_cnx.slds.pro_leagues_m
+        self.mongo_pro_tl_col = self.mongo_cnx.slds.pro_leagues_tl
         self.mongo_scrims_m_col = self.mongo_cnx.slds.scrims_m
         self.mongo_scrims_tl_col = self.mongo_cnx.slds.scrims_tl
         self.mongo_static_data = self.mongo_cnx.slds.static_data
@@ -54,7 +55,7 @@ class DataBase:
             cursor1 = info_coll.find({}, {'_id': 0, 'game_id': 1, 'realm': 1, 'hash': 1})
             new_game_ids = [(record['game_id'], record['realm'], record['hash']) for record in cursor1]
             cursor2 = raw_data_coll.find({}, {'_id': 0, 'gameId': 1, 'platformId': 1})
-            current_game_ids = [(record['gameId'], record['platformId']) for record in cursor2]
+            current_game_ids = [(str(record['gameId']), record['platformId']) for record in cursor2]
 
         return current_game_ids, new_game_ids
 
@@ -206,14 +207,21 @@ class DataBase:
                                    database=self.mongo_static_data, tl=tl
                                    ) for g in tqdm(df.iterrows(), total=df.shape[0],
                                                    desc='\tTransforming JSON into XLSX')])
-        elif self.league == 'LCK':
-            return pd.concat([g2df(match=self.mongo_lck_m_col.find_one({'platformId': g[1]['realm'],
-                                                                        'gameId': g[1]['game_id']}, {'_id': 0}),
-                                   timeline=self.mongo_lck_tl_col.find_one({'platformId': str(g[1]['realm']),
+        elif self.league == PRO:
+            return pd.concat([g2df(match=self.mongo_pro_m_col.find_one({'platformId': g[1]['realm'],
+                                                                        'gameId': int(g[1]['game_id'])}, {'_id': 0}),
+                                   timeline=self.mongo_pro_tl_col.find_one({'platformId': str(g[1]['realm']),
                                                                             'gameId': str(g[1]['game_id'])},
                                                                            {'_id': 0}),
-                                   week=g[1]['week'], custom=False,
-                                   custom_positions=STANDARD_POSITIONS, database=self.mongo_static_data, tl=tl
+                                   custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS].T),
+                                   custom_positions=STANDARD_POSITIONS,
+                                   team_names=list(g[1][['blue', 'red']]),
+                                   custom=(g[1]['hash'] is None),
+                                   week=g[1]['week'],
+                                   database=self.mongo_static_data,
+                                   split=g[1]['split'],
+                                   season=g[1]['season'],
+                                   tl=tl
                                    ) for g in tqdm(df.iterrows(), total=df.shape[0],
                                                    desc='\tTransforming JSON into XLSX')])
         elif self.league == 'SOLOQ':
@@ -359,6 +367,7 @@ def parse_args(args, api_key):
 
             concatenated_df = db.concat_games(df, tl=args.timeline)
             final_df = clean_export_dataframe(concatenated_df)
+            final_df['currentAccountId'] = final_df.currentAccountId.astype(np.int64)
 
             # Merge Solo Q players info with data
             if league == SOLOQ:

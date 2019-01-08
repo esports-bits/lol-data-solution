@@ -12,7 +12,7 @@ from requests.exceptions import HTTPError
 from config.constants import RAW_DATA_PATH, EXCEL_EXPORT_PATH, CSV_EXPORT_PATH_MERGED, EXCEL_EXPORT_PATH_MERGED, \
     SCRIMS_POSITIONS_COLS, CUSTOM_PARTICIPANT_COLS, STANDARD_POSITIONS, API_KEY, STATIC_DATA_DIR, LEAGUES_DATA_DICT, \
     CSV_EXPORT_PATH, IDS_FILE_PATH, DTYPES, OFFICIAL_LEAGUE, EXPORTS_DIR, LEAGUES_DATA_DIR, MATCHES_RAW_DATA_DIR, \
-    SOLOQ_GAMES_DIR, LCK_GAMES_DIR, SCRIMS_GAMES_DIR, SLO_GAMES_DIR, REGIONS
+    SOLOQ_GAMES_DIR, PRO_GAMES_DIR, SCRIMS_GAMES_DIR, SLO_GAMES_DIR, REGIONS
 
 
 class FileSystem:
@@ -231,8 +231,8 @@ def create_dirs():
     if not os.path.exists(STATIC_DATA_DIR):
         os.makedirs(STATIC_DATA_DIR)
 
-    if not os.path.exists(LCK_GAMES_DIR):
-        os.makedirs(LCK_GAMES_DIR)
+    if not os.path.exists(PRO_GAMES_DIR):
+        os.makedirs(PRO_GAMES_DIR)
 
     if not os.path.exists(SLO_GAMES_DIR):
         os.makedirs(SLO_GAMES_DIR)
