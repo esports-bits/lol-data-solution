@@ -221,7 +221,8 @@ class DataBase:
                                    database=self.mongo_static_data,
                                    split=g[1]['split'],
                                    season=g[1]['season'],
-                                   tl=tl
+                                   tl=tl,
+                                   league=g[1]['league']
                                    ) for g in tqdm(df.iterrows(), total=df.shape[0],
                                                    desc='\tTransforming JSON into XLSX')])
         elif self.league == 'SOLOQ':
@@ -367,10 +368,10 @@ def parse_args(args, api_key):
 
             concatenated_df = db.concat_games(df, tl=args.timeline)
             final_df = clean_export_dataframe(concatenated_df)
-            final_df['currentAccountId'] = final_df.currentAccountId.astype(np.int64)
 
             # Merge Solo Q players info with data
             if league == SOLOQ:
+                final_df['currentAccountId'] = final_df.currentAccountId.astype(np.int64)
                 player_info_df = get_soloq_dataframe(db.mongo_players)
                 final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
                                           how='left')

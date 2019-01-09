@@ -27,4 +27,7 @@ def export_dataset_kwargs(df, kwargs):
     if 'season' in kwargs:
         df['season'] = kwargs['season']
 
+    if 'league' in kwargs:
+        df['league'] = kwargs['league']
+
     return df
