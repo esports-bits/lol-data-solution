@@ -2,14 +2,12 @@ import os
 import urllib.request
 import json
 import pandas as pd
-import numpy as np
 from pymongo import MongoClient
 from itertools import chain
 from riotwatcher import RiotWatcher
 from tqdm import tqdm
 from requests.exceptions import HTTPError
 from connectors import dropbox_upload
-from converters.data2files import get_runes_reforged_json
 from converters.data2frames import game_to_dataframe as g2df, get_db_generic_dataframe, clean_export_dataframe
 from converters.data2frames import get_soloq_dataframe
 from datetime import datetime as dt, timedelta
@@ -21,28 +19,28 @@ from config.constants import MONGODB_CONN, SOLOQ, REGIONS, CUSTOM_PARTICIPANT_CO
 
 class DataBase:
     def __init__(self, api_key, region, league):
-        self.rw = RiotWatcher(api_key)
+        self.rw = RiotWatcher(api_key, v4=True)
         self.region = region
         self.league = league
         self.mongo_cnx = MongoClient(MONGODB_CONN)
-        self.mongo_soloq_m_col = self.mongo_cnx.slds.soloq_m
-        self.mongo_soloq_tl_col = self.mongo_cnx.slds.soloq_tl
-        self.mongo_slo_m_col = self.mongo_cnx.slds.slo_m
-        self.mongo_slo_tl_col = self.mongo_cnx.slds.slo_tl
-        self.mongo_pro_m_col = self.mongo_cnx.slds.pro_leagues_m
-        self.mongo_pro_tl_col = self.mongo_cnx.slds.pro_leagues_tl
-        self.mongo_scrims_m_col = self.mongo_cnx.slds.scrims_m
-        self.mongo_scrims_tl_col = self.mongo_cnx.slds.scrims_tl
-        self.mongo_static_data = self.mongo_cnx.slds.static_data
-        self.mongo_players = self.mongo_cnx.slds.players
-        self.mongo_teams = self.mongo_cnx.slds.teams
-        self.mongo_competitions = self.mongo_cnx.slds.competitions
-        self.mongo_slo = self.mongo_cnx.slds.slo
+        self.slds_db = self.mongo_cnx.slds
+        self.soloqm_col = self.slds_db.soloq_m
+        self.soloqtl_col = self.slds_db.soloq_tl
+        self.slom_col = self.slds_db.slo_m
+        self.slotl_col = self.slds_db.slo_tl
+        self.prom_col = self.slds_db.pro_leagues_m
+        self.protl_col = self.slds_db.pro_leagues_tl
+        self.mongo_scrims_m_col = self.slds_db.scrims_m
+        self.mongo_scrims_tl_col = self.slds_db.scrims_tl
+        self.staticdata = self.slds_db.static_data
+        self.players = self.slds_db.players
+        self.teams = self.slds_db.teams
+        self.competitions = self.slds_db.competitions
         self.excel_exported_flag = False
 
     def get_old_and_new_game_ids(self, **kwargs):
         if self.league == 'SOLOQ':
-            cursor = self.mongo_soloq_m_col.find({}, {'_id': 0, 'gameId': 1, 'platformId': 1})
+            cursor = self.soloqm_col.find({}, {'_id': 0, 'gameId': 1, 'platformId': 1})
             current_game_ids = [(gid['gameId'], gid['platformId']) for gid in cursor]
             acc_ids = self.get_account_ids(**kwargs)
             print('\t{} account ids found.'.format(len(acc_ids)))
@@ -50,8 +48,8 @@ class DataBase:
             new_game_ids = self.get_game_ids(acc_ids=acc_ids, **kwargs)
         else:
             raw_data_coll_name = self.league.lower() + '_m'
-            raw_data_coll = self.mongo_cnx.slds.get_collection(raw_data_coll_name)
-            info_coll = self.mongo_cnx.slds.get_collection(self.league.lower())
+            raw_data_coll = self.slds_db.get_collection(raw_data_coll_name)
+            info_coll = self.slds_db.get_collection(self.league.lower())
             cursor1 = info_coll.find({}, {'_id': 0, 'game_id': 1, 'realm': 1, 'hash': 1})
             new_game_ids = [(record['game_id'], record['realm'], record['hash']) for record in cursor1]
             cursor2 = raw_data_coll.find({}, {'_id': 0, 'gameId': 1, 'platformId': 1})
@@ -60,7 +58,7 @@ class DataBase:
         return current_game_ids, new_game_ids
 
     def get_account_ids(self, **kwargs):
-        players = self.mongo_players
+        players = self.players
         if kwargs['team_abbv'] is not None:
             print('\tLooking for account ids of {} players.'.format(kwargs['team_abbv'].replace(',', ' and ')))
             abbvs = kwargs['team_abbv'].split(',')
@@ -151,7 +149,7 @@ class DataBase:
             matchlist_kwargs['end_index'] = matchlist_kwargs.pop('n_games')
 
         matches = list(chain.from_iterable(
-            [self.rw.match.matchlist_by_account(account_id=acc, **matchlist_kwargs)['matches'] for acc in acc_ids]))
+            [self.rw.match.matchlist_by_account(encrypted_account_id=acc, **matchlist_kwargs)['matches'] for acc in acc_ids]))
         result = list(set([(m['gameId'], m['platformId']) for m in matches]))
         return result
 
@@ -161,8 +159,8 @@ class DataBase:
             platform_id = data['match']['platformId']
             data['timeline']['gameId'] = game_id
             data['timeline']['platformId'] = platform_id
-            m_coll = self.mongo_cnx.slds.get_collection(self.league.lower() + '_m')
-            tl_coll = self.mongo_cnx.slds.get_collection(self.league.lower() + '_tl')
+            m_coll = self.slds_db.get_collection(self.league.lower() + '_m')
+            tl_coll = self.slds_db.get_collection(self.league.lower() + '_tl')
             m_coll.insert_one(data['match'])
             tl_coll.insert_one(data['timeline'])
         else:
@@ -170,26 +168,26 @@ class DataBase:
                             '"timeline": timeline_dict}.')
 
     def get_supported_leagues(self):
-        cursor = self.mongo_competitions.find({}, {'_id': 0, 'key': 1})
+        cursor = self.competitions.find({}, {'_id': 0, 'key': 1})
         return [abbv['key'] for abbv in cursor]
 
     def get_supported_teams(self):
-        cursor = self.mongo_teams.find({}, {'_id': 0, 'key': 1})
+        cursor = self.teams.find({}, {'_id': 0, 'key': 1})
         return [abbv[0] for abbv in cursor]
 
     def concat_games(self, df, tl):
         if self.league == 'SLO':
-            return pd.concat([g2df(match=self.mongo_slo_m_col.find_one({'platformId': g[1]['realm'],
+            return pd.concat([g2df(match=self.slom_col.find_one({'platformId': g[1]['realm'],
                                                                         'gameId': g[1]['game_id']}, {'_id': 0}),
-                                   timeline=self.mongo_slo_tl_col.find_one({'platformId': str(g[1]['realm']),
+                                   timeline=self.slotl_col.find_one({'platformId': str(g[1]['realm']),
                                                                             'gameId': str(g[1]['game_id'])},
-                                                                           {'_id': 0}),
+                                                                    {'_id': 0}),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS].T),
                                    custom_positions=STANDARD_POSITIONS,
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom=(g[1]['hash'] is None),
                                    week=g[1]['week'],
-                                   database=self.mongo_static_data,
+                                   database=self.staticdata,
                                    split=g[1]['split'],
                                    season=g[1]['season'],
                                    tl=tl
@@ -204,21 +202,21 @@ class DataBase:
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS]),
                                    custom=True, enemy=g[1]['enemy'], game_n=g[1]['game_n'], blue_win=g[1]['blue_win'],
-                                   database=self.mongo_static_data, tl=tl
+                                   database=self.staticdata, tl=tl
                                    ) for g in tqdm(df.iterrows(), total=df.shape[0],
                                                    desc='\tTransforming JSON into XLSX')])
         elif self.league == PRO:
-            return pd.concat([g2df(match=self.mongo_pro_m_col.find_one({'platformId': g[1]['realm'],
+            return pd.concat([g2df(match=self.prom_col.find_one({'platformId': g[1]['realm'],
                                                                         'gameId': int(g[1]['game_id'])}, {'_id': 0}),
-                                   timeline=self.mongo_pro_tl_col.find_one({'platformId': str(g[1]['realm']),
+                                   timeline=self.protl_col.find_one({'platformId': str(g[1]['realm']),
                                                                             'gameId': str(g[1]['game_id'])},
-                                                                           {'_id': 0}),
+                                                                    {'_id': 0}),
                                    custom_names=list(g[1][CUSTOM_PARTICIPANT_COLS].T),
                                    custom_positions=STANDARD_POSITIONS,
                                    team_names=list(g[1][['blue', 'red']]),
                                    custom=(g[1]['hash'] is None),
                                    week=g[1]['week'],
-                                   database=self.mongo_static_data,
+                                   database=self.staticdata,
                                    split=g[1]['split'],
                                    season=g[1]['season'],
                                    tl=tl,
@@ -226,11 +224,11 @@ class DataBase:
                                    ) for g in tqdm(df.iterrows(), total=df.shape[0],
                                                    desc='\tTransforming JSON into XLSX')])
         elif self.league == 'SOLOQ':
-            return pd.concat([g2df(match=self.mongo_soloq_m_col.find_one({'platformId': gid[1][1],
+            return pd.concat([g2df(match=self.soloqm_col.find_one({'platformId': gid[1][1],
                                                                           'gameId': int(gid[1][0])}, {'_id': 0}),
-                                   timeline=self.mongo_soloq_tl_col.find_one({'platformId': gid[1][1],
+                                   timeline=self.soloqtl_col.find_one({'platformId': gid[1][1],
                                                                               'gameId': str(gid[1][0])}, {'_id': 0}),
-                                   custom=False, database=self.mongo_static_data, tl=tl
+                                   custom=False, database=self.staticdata, tl=tl
                                    ) for gid in tqdm(df.iterrows(), total=df.shape[0],
                                                      desc='\tTransforming JSON into XLSX')])
 
@@ -239,7 +237,7 @@ class DataBase:
         if self.league == SOLOQ:
             game_id = 'gameId'
             realm = 'platformId'
-            coll = self.mongo_cnx.slds.get_collection(self.league.lower() + '_m')
+            coll = self.slds_db.get_collection(self.league.lower() + '_m')
             if kwargs['patch'] is not None:
                 patch = kwargs['patch']
                 print('\tLooking for games played on patch {}.'.format(patch))
@@ -265,7 +263,7 @@ class DataBase:
         else:
             game_id = 'game_id'
             realm = 'realm'
-            coll = self.mongo_cnx.slds.get_collection(self.league.lower())
+            coll = self.slds_db.get_collection(self.league.lower())
             if kwargs['split']:
                 print('\tLooking for games played in {} split.'.format(kwargs['split']))
                 mongo_query['split'] = kwargs['split']
@@ -308,22 +306,22 @@ class DataBase:
         # Versions
         region = [k for k, v in REGIONS.items() if v == self.region][0].lower()
         version = self.rw.data_dragon.versions_for_region(region=region)['v']
-        db_versions = self.mongo_static_data.find_one({'type': 'versions'})
+        db_versions = self.staticdata.find_one({'type': 'versions'})
         if version not in db_versions['versions']:
             db_versions['versions'].insert(0, version)
-            self.mongo_static_data.replace_one(filter={'type': 'versions'}, replacement=db_versions, upsert=True)
+            self.staticdata.replace_one(filter={'type': 'versions'}, replacement=db_versions, upsert=True)
         items = self.rw.data_dragon.items(version=version)
         champs = self.rw.data_dragon.champions(version=version)
         summs = self.rw.data_dragon.summoner_spells(version=version)
-        runes = {'runes': get_runes_reforged_json(version), 'type': 'runes'}
-        self.mongo_static_data.replace_one(filter={'type': 'champion'}, replacement=champs, upsert=True)
-        self.mongo_static_data.replace_one(filter={'type': 'item'}, replacement=items, upsert=True)
-        self.mongo_static_data.replace_one(filter={'type': 'summoner'}, replacement=summs, upsert=True)
-        self.mongo_static_data.replace_one(filter={'type': 'runes'}, replacement=runes, upsert=True)
+        runes = {'runes': self.rw.data_dragon.runes_reforged(version=version), 'type': 'runes'}
+        self.staticdata.replace_one(filter={'type': 'champion'}, replacement=champs, upsert=True)
+        self.staticdata.replace_one(filter={'type': 'item'}, replacement=items, upsert=True)
+        self.staticdata.replace_one(filter={'type': 'summoner'}, replacement=summs, upsert=True)
+        self.staticdata.replace_one(filter={'type': 'runes'}, replacement=runes, upsert=True)
 
     def modify_item_in_db(self, item_type, change_type, item):
         if item_type.lower() in DB_ITEMS and change_type.lower() in DB_CHANGE_TYPE:
-            coll = self.mongo_cnx.slds.get_collection(item_type)
+            coll = self.slds_db.get_collection(item_type)
             if change_type.lower() == 'add':
                 coll.insert_one(item)
             elif change_type.lower() == 'edit':
@@ -371,8 +369,7 @@ def parse_args(args, api_key):
 
             # Merge Solo Q players info with data
             if league == SOLOQ:
-                final_df['currentAccountId'] = final_df.currentAccountId.astype(np.int64)
-                player_info_df = get_soloq_dataframe(db.mongo_players)
+                player_info_df = get_soloq_dataframe(db.players)
                 final_df = final_df.merge(player_info_df, left_on='currentAccountId', right_on='account_id',
                                           how='left')
 
