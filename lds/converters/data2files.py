@@ -21,6 +21,7 @@ def read_json(save_dir, file_name):
             return json.load(fp)
 
 
+# DEPRECATED. Now using V4 data dragon from RiotWatcher
 def get_runes_reforged_json(version):
     url = DATA_DRAGON_URL.format(version=version, language=DD_LANGUAGE, endpoint=DD_RUNES_REFORGED)
     r = requests.get(url)

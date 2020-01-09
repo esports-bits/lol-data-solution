@@ -1,5 +1,6 @@
 from itertools import chain
 import pandas as pd
+import numpy as np
 import datetime
 from converters.kwargs2whatever import export_dataset_kwargs
 from config.constants import STATIC_DATA_RELEVANT_COLS, STATIC_DATA_DIR, ITEMS_COLS, SUMMS_COLS, RUNES_COLS, BANS_COLS
@@ -271,7 +272,7 @@ def timeline_participant_stats_to_dataframe(timeline):
     tl_frames = timeline['frames']
     tl_participants = [frame['participantFrames'] for frame in tl_frames]
     tl_ps_df = pd.concat(
-        [pd.DataFrame(stats, index=(i,))
+        [pd.DataFrame(stats, index=pd.Series(i))
          for i, p in enumerate(tl_participants)
          for p_id, stats in p.items()])
     return tl_ps_df.reset_index().rename(columns={'index': 'frame'})
@@ -440,8 +441,10 @@ def clean_export_dataframe(df):
             return 'Blue'
         elif x == 200:
             return 'Red'
-
-    df['side'] = df.teamId_team.apply(set_side)
+    try:
+        df['side'] = df.teamId_team.apply(set_side)
+    except AttributeError:
+        pass
     
     ban_cols = [col for col in df.columns if 'ban' in col and 'name' not in col]
     diff_cols = [col for col in df.columns if 'diff' in col]

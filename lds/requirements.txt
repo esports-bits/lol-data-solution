@@ -1,5 +1,5 @@
 pymongo
-pandas=0.20.1
+pandas
 tqdm
 riotwatcher
 requests
